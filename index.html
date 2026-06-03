@@ -62,6 +62,37 @@
   a{color:var(--c1)}
   ul.refs li{margin-bottom:10px;font-size:13px;line-height:1.5}
   .note-box{background:#fff7e6;border:1px solid #f0d9a8;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin:12px 0}
+  /* DRAWER */
+  #drawer{position:fixed;top:0;right:-520px;width:500px;max-width:92vw;height:100%;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.22);z-index:3000;transition:right .28s ease;display:flex;flex-direction:column}
+  #drawer.open{right:0}
+  #drawer .dh{background:var(--navy);color:#fff;padding:14px 18px}
+  #drawer .dh h3{margin:0;font-size:16px}
+  #drawer .dh .sub{font-size:12px;color:#b9cbe0;margin-top:3px}
+  #drawer .dh .x{position:absolute;top:12px;right:14px;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+  #drawer .db{padding:16px 18px;overflow-y:auto;flex:1}
+  #drawer h4{color:var(--navy2);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px;border-bottom:2px solid var(--line);padding-bottom:5px}
+  #drawer h4:first-child{margin-top:0}
+  .ans{background:#eef4fb;border-left:3px solid var(--c1);padding:9px 11px;border-radius:6px;font-size:13px;line-height:1.5;margin-bottom:6px}
+  .news{border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin-bottom:8px}
+  .news a{font-size:13.5px;font-weight:600;text-decoration:none;line-height:1.3}
+  .news .m{font-size:11px;color:var(--muted);margin:3px 0}
+  .news p{font-size:12px;color:#43505c;margin:4px 0 0;line-height:1.45}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:120px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+  .bar .f{width:100%;background:var(--c5);border-radius:2px 2px 0 0}
+  .bar .e{width:100%;background:#9ecae1;border-radius:2px 2px 0 0}
+  .bar .lab{font-size:8.5px;color:var(--muted);margin-top:3px;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+  .stat{display:inline-block;background:#f1f5f9;border-radius:6px;padding:5px 10px;font-size:12px;margin:0 6px 6px 0}
+  .stat b{color:var(--navy);font-size:15px;display:block}
+  .tl{list-style:none;padding:0;margin:0;border-left:2px solid var(--line)}
+  .tl li{position:relative;padding:0 0 14px 16px}
+  .tl li:before{content:"";position:absolute;left:-6px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--c1)}
+  .tl .d{font-size:11px;color:var(--muted);font-weight:600}
+  .tl a{font-size:13px;font-weight:600;text-decoration:none}
+  .spin{text-align:center;color:var(--muted);font-size:13px;padding:30px}
+  .setup{background:#fff7e6;border:1px solid #f0d9a8;border-radius:8px;padding:14px;font-size:13px;line-height:1.55}
+  .setup code{background:#fff;border:1px solid #e3d3a0;padding:1px 5px;border-radius:4px;font-size:12px}
+  .detailbtn{margin-top:8px;width:100%;background:var(--navy2);color:#fff;border:none;padding:7px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer}
 </style>
 </head>
 <body>
@@ -213,6 +244,16 @@
 
 </main>
 
+<!-- ===================== DRAWER: live developments + timeline ===================== -->
+<aside id="drawer">
+  <div class="dh">
+    <button class="x" onclick="closeDetail()">&times;</button>
+    <h3 id="dTitle">—</h3>
+    <div class="sub" id="dSub"></div>
+  </div>
+  <div class="db" id="dBody"></div>
+</aside>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="data.js"></script>
 <script>
@@ -264,7 +305,8 @@ function draw(metric){
         <tr><td>INFORM Severity (1&ndash;10)</td><td>${d.informIdx}</td></tr>
         <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
       </table>
-      <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${d.drivers||'—'}</p></div>`);
+      <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${d.drivers||'—'}</p>
+      <button type="button" class="detailbtn" onclick="openDetail(${JSON.stringify(d.crisis)},${JSON.stringify(d.name)},${d.informIdx},${e.toFixed(2)})">📈 Live updates &amp; conflict timeline</button></div>`);
     layer.addLayer(m);
   });
   drawLegend(metric);
@@ -310,6 +352,82 @@ document.getElementById('srcgrid').innerHTML = SOURCES.map(s=>`
     <p>${s[1]}</p>
     <a href="${s[4]}" target="_blank" rel="noopener">${s[4].replace('https://','')} →</a>
   </div>`).join('');
+
+/* ---------- Detail drawer: live Tavily news + ACLED timeline ---------- */
+const drawer=document.getElementById('drawer');
+function closeDetail(){ drawer.classList.remove('open'); }
+function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function fmtDate(s){ if(!s) return ''; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
+
+async function openDetail(crisis,country,informIdx,eii){
+  document.getElementById('dTitle').textContent=crisis;
+  document.getElementById('dSub').textContent=`${country} · INFORM ${informIdx}/10 · EII ${eii}`;
+  document.getElementById('dBody').innerHTML='<div class="spin">Fetching live data…</div>';
+  drawer.classList.add('open');
+  try{
+    const r=await fetch(`/api/detail?crisis=${encodeURIComponent(crisis)}&country=${encodeURIComponent(country)}`);
+    if(!r.ok) throw new Error('backend '+r.status);
+    renderDetail(await r.json());
+  }catch(err){
+    document.getElementById('dBody').innerHTML=
+      `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;
+  }
+}
+
+function renderDetail(d){
+  const k=d.keys||{}; let h='';
+  // ---- setup card if keys missing ----
+  if(!k.tavily || !k.acled){
+    h+=`<div class="setup"><b>Connect data sources to go live.</b><br>Add a <code>.env</code> file in the project folder:`;
+    if(!k.tavily) h+=`<br>• <b>Tavily</b> (live news): free key at <a href="https://app.tavily.com" target="_blank">app.tavily.com</a> → <code>TAVILY_API_KEY=tvly-…</code>`;
+    if(!k.acled) h+=`<br>• <b>ACLED</b> (conflict timeline): register at <a href="https://developer.acleddata.com" target="_blank">developer.acleddata.com</a> → <code>ACLED_API_KEY=…</code> and <code>ACLED_EMAIL=…</code>`;
+    h+=`<br><br>Then restart <code>python3 server.py</code>. See <code>.env.example</code>.</div>`;
+  }
+  // ---- Tavily live developments ----
+  const t=d.tavily;
+  if(t){
+    h+='<h4>🟢 Live developments — Tavily</h4>';
+    if(t.answer) h+=`<div class="ans">${esc(t.answer)}</div>`;
+    (t.items||[]).forEach(it=>{
+      h+=`<div class="news"><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>
+        <div class="m">${esc(it.source||'')}${it.date?' · '+fmtDate(it.date):''}</div>
+        ${it.snippet?`<p>${esc(it.snippet)}…</p>`:''}</div>`;
+    });
+    if(!(t.items||[]).length) h+='<p style="font-size:12.5px;color:#5b6b7a">No recent items returned.</p>';
+  }
+  // ---- ACLED structured timeline ----
+  const a=d.acled;
+  if(a && a.months && a.months.length){
+    const maxF=Math.max(1,...a.months.map(m=>m.fatalities));
+    const maxE=Math.max(1,...a.months.map(m=>m.events));
+    h+='<h4>📊 Conflict timeline — ACLED</h4>';
+    h+=`<div><span class="stat"><b>${a.total_events.toLocaleString()}</b>events (18 mo)</span>
+        <span class="stat"><b>${a.total_fatalities.toLocaleString()}</b>fatalities</span></div>`;
+    h+='<div style="font-size:11px;color:#5b6b7a;margin:4px 0"><span style="color:#d7301f">█</span> fatalities &nbsp; <span style="color:#9ecae1">█</span> events &nbsp;(per month)</div>';
+    h+='<div class="bars">'+a.months.map(m=>{
+      const fh=Math.round(m.fatalities/maxF*55), eh=Math.round(m.events/maxE*55);
+      return `<div class="bar" title="${m.month}: ${m.events} events, ${m.fatalities} fatalities">
+        <div class="f" style="height:${fh}px"></div><div class="e" style="height:${eh}px"></div>
+        <div class="lab">${m.month.slice(2)}</div></div>`;
+    }).join('')+'</div>';
+    if(a.by_type && a.by_type.length){
+      h+='<div style="margin-top:10px;font-size:12px">'+a.by_type.slice(0,5).map(t=>`<span class="stat">${esc(t[0])}: <b style="display:inline;font-size:12px">${t[1]}</b></span>`).join('')+'</div>';
+    }
+    h+=`<div style="font-size:10.5px;color:#8a97a4;margin-top:6px">ACLED matched country: ${esc(a.country_used)}</div>`;
+  }
+  // ---- Narrative timeline (news-derived, chronological) ----
+  if(t && (t.items||[]).length){
+    const dated=(t.items||[]).filter(it=>it.date && !isNaN(new Date(it.date)))
+      .sort((x,y)=>new Date(y.date)-new Date(x.date));
+    if(dated.length){
+      h+='<h4>🕒 Narrative timeline — news-derived</h4>';
+      h+='<div style="font-size:11px;color:#5b6b7a;margin-bottom:8px">Recent reporting in chronological order'+(a&&a.months&&a.months.length?' (qualitative layer over the ACLED counts above)':' — connect ACLED for structured event counts')+'.</div>';
+      h+='<ul class="tl">'+dated.map(it=>`<li><div class="d">${fmtDate(it.date)} · ${esc(it.source||'')}</div><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a></li>`).join('')+'</ul>';
+    }
+  }
+  if(d.cached) h+='<div style="font-size:10.5px;color:#8a97a4;margin-top:10px;text-align:right">⟳ cached (≤6h) — add <code>&nocache=1</code> to force refresh</div>';
+  document.getElementById('dBody').innerHTML=h||'<p>No data available.</p>';
+}
 
 /* ---------- Tab switching ---------- */
 document.querySelectorAll('nav button').forEach(b=>{

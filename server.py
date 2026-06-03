@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""Evacuation Inform Index — local backend.
+
+Serves the static site AND a /api/detail endpoint that pulls, server-side:
+  • Tavily  -> live news / developments per crisis (real-time)
+  • ACLED   -> structured, dated conflict events for the timeline
+Keys are read from a gitignored .env file (or the environment).
+Stdlib only — no pip install needed.  Run:  python3 server.py
+"""
+import json, os, time, hashlib, urllib.request, urllib.parse, http.server
+from datetime import datetime, timedelta
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+PORT = int(os.environ.get("PORT", "8000"))
+CACHE_DIR = os.path.join(ROOT, ".cache")
+CACHE_TTL = 6 * 3600  # 6 hours — repeat clicks within this window are free
+
+def _cache_path(key):
+    return os.path.join(CACHE_DIR, hashlib.sha1(key.encode()).hexdigest()[:16] + ".json")
+
+def cache_get(key):
+    p = _cache_path(key)
+    if os.path.exists(p) and time.time() - os.path.getmtime(p) < CACHE_TTL:
+        try:
+            return json.load(open(p))
+        except Exception:
+            return None
+    return None
+
+def cache_set(key, obj):
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        json.dump(obj, open(_cache_path(key), "w"))
+    except Exception:
+        pass
+
+# ---- ACLED country-name aliases (INFORM name -> ACLED name) ----
+ACLED_ALIAS = {
+    "DR Congo": "Democratic Republic of Congo",
+    "Congo DRC": "Democratic Republic of Congo",
+    "DRC": "Democratic Republic of Congo",
+    "CAR": "Central African Republic",
+    "Syrian Arab Republic": "Syria",
+    "occupied Palestinian territory": "Palestine",
+    "State of Palestine": "Palestine",
+    "Venezuela (Bolivarian Republic of)": "Venezuela",
+    "Iran (Islamic Republic of)": "Iran",
+    "Tanzania": "United Republic of Tanzania",
+    "Moldova": "Republic of Moldova",
+    "Bolivia": "Bolivia",
+}
+
+def load_env():
+    env = {}
+    p = os.path.join(ROOT, ".env")
+    if os.path.exists(p):
+        for line in open(p):
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip().strip('"').strip("'")
+    for k in ("TAVILY_API_KEY", "ACLED_API_KEY", "ACLED_EMAIL"):
+        if os.environ.get(k):
+            env[k] = os.environ[k]
+    return env
+
+def http_json(url, data=None, headers=None, method="GET"):
+    body = json.dumps(data).encode() if data is not None else None
+    h = {"Content-Type": "application/json", "User-Agent": "EII/1.0"}
+    if headers:
+        h.update(headers)
+    req = urllib.request.Request(url, data=body, headers=h, method=method)
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.load(r)
+
+def tavily_news(key, query, days=60, max_results=10):
+    out = http_json("https://api.tavily.com/search", method="POST", data={
+        "api_key": key, "query": query, "topic": "news",
+        "days": days, "max_results": max_results,
+        "include_answer": True, "search_depth": "basic",
+    })
+    items = []
+    for r in out.get("results", []):
+        items.append({
+            "title": r.get("title"),
+            "url": r.get("url"),
+            "date": r.get("published_date"),
+            "snippet": (r.get("content") or "")[:260],
+            "source": urllib.parse.urlparse(r.get("url", "")).netloc.replace("www.", ""),
+        })
+    return {"answer": out.get("answer"), "items": items}
+
+def acled_timeline(key, email, country, months=18):
+    name = ACLED_ALIAS.get(country, country)
+    since = (datetime.utcnow() - timedelta(days=months * 31)).strftime("%Y-%m-%d")
+    url = "https://api.acleddata.com/acled/read?" + urllib.parse.urlencode({
+        "key": key, "email": email, "country": name,
+        "event_date": since, "event_date_where": ">=",
+        "fields": "event_date|event_type|fatalities", "limit": 5000,
+    })
+    out = http_json(url)
+    buckets, types = {}, {}
+    for e in out.get("data", []):
+        m = (e.get("event_date") or "")[:7]
+        if not m:
+            continue
+        b = buckets.setdefault(m, {"month": m, "events": 0, "fatalities": 0})
+        b["events"] += 1
+        try:
+            b["fatalities"] += int(e.get("fatalities") or 0)
+        except (TypeError, ValueError):
+            pass
+        t = e.get("event_type") or "Other"
+        types[t] = types.get(t, 0) + 1
+    return {
+        "country_used": name,
+        "months": sorted(buckets.values(), key=lambda x: x["month"]),
+        "by_type": sorted(types.items(), key=lambda x: -x[1]),
+        "total_events": sum(b["events"] for b in buckets.values()),
+        "total_fatalities": sum(b["fatalities"] for b in buckets.values()),
+    }
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *a, **k):
+        super().__init__(*a, directory=ROOT, **k)
+
+    def log_message(self, *a):
+        pass  # quiet
+
+    def send_json(self, obj, code=200):
+        b = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(b)))
+        self.end_headers()
+        self.wfile.write(b)
+
+    def do_GET(self):
+        if self.path.startswith("/api/detail"):
+            return self.api_detail()
+        return super().do_GET()
+
+    def api_detail(self):
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        crisis = (q.get("crisis") or [""])[0]
+        country = (q.get("country") or [""])[0]
+        env = load_env()
+        tk = env.get("TAVILY_API_KEY")
+        ak, ae = env.get("ACLED_API_KEY"), env.get("ACLED_EMAIL")
+        nocache = "nocache" in q
+        ckey = f"{crisis}|{country}|t{bool(tk)}|a{bool(ak and ae)}"
+        if not nocache:
+            hit = cache_get(ckey)
+            if hit:
+                hit["cached"] = True
+                return self.send_json(hit)
+        resp = {"crisis": crisis, "country": country, "cached": False,
+                "tavily": None, "acled": None, "errors": [], "keys": {}}
+        resp["keys"]["tavily"] = bool(tk)
+        if tk:
+            try:
+                resp["tavily"] = tavily_news(
+                    tk, f"{country} {crisis} latest conflict, security and humanitarian developments")
+            except Exception as e:
+                resp["errors"].append(f"tavily: {e}")
+        else:
+            resp["errors"].append("no_tavily_key")
+        resp["keys"]["acled"] = bool(ak and ae)
+        if ak and ae:
+            try:
+                resp["acled"] = acled_timeline(ak, ae, country)
+            except Exception as e:
+                resp["errors"].append(f"acled: {e}")
+        else:
+            resp["errors"].append("no_acled_key")
+        if resp.get("tavily") or resp.get("acled"):
+            cache_set(ckey, resp)  # only cache real data
+        self.send_json(resp)
+
+if __name__ == "__main__":
+    httpd = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    print(f"EII backend on http://localhost:{PORT}  (LAN + /api/detail live)")
+    httpd.serve_forever()
