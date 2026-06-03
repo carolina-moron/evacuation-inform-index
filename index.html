@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Evacuation Inform Index (EII)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --navy:#1f3a5f; --navy2:#2b4d7a; --ink:#1c2733; --muted:#5b6b7a;
+    --line:#dce3ea; --bg:#f4f6f9; --card:#fff;
+    --c1:#2c7fb8; --c5:#d7301f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  header{background:var(--navy);color:#fff;padding:14px 22px}
+  header h1{margin:0;font-size:19px;font-weight:650;letter-spacing:.2px}
+  header p{margin:3px 0 0;font-size:12.5px;color:#b9cbe0}
+  nav{display:flex;gap:2px;background:var(--navy2);padding:0 12px;flex-wrap:wrap}
+  nav button{background:none;border:none;color:#cdd9e6;padding:11px 16px;font-size:13.5px;cursor:pointer;border-bottom:3px solid transparent}
+  nav button:hover{color:#fff}
+  nav button.active{color:#fff;border-bottom-color:#7fb1de;font-weight:600}
+  main{padding:0}
+  .panel{display:none}
+  .panel.active{display:block}
+  /* MAP */
+  #mapwrap{position:relative;height:calc(100vh - 104px)}
+  #map{position:absolute;inset:0}
+  .legend,.controls{position:absolute;z-index:1000;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.12);font-size:12.5px}
+  .legend{bottom:18px;left:18px;padding:10px 12px;line-height:1.7}
+  .legend b{display:block;margin-bottom:5px;font-size:12px}
+  .legend i{width:13px;height:13px;display:inline-block;border-radius:50%;margin-right:7px;vertical-align:-1px}
+  .controls{top:14px;right:14px;padding:10px 12px;max-width:230px}
+  .controls label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .controls select{width:100%;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+  .controls .note{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.4}
+  .lp h3{margin:0 0 2px;font-size:15px}
+  .lp .edi{font-size:13px;font-weight:700;margin:6px 0}
+  .lp table{border-collapse:collapse;width:100%;font-size:12px;margin-top:4px}
+  .lp td{padding:2px 6px;border-top:1px solid #eee}
+  .lp td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:1px 8px;border-radius:10px;color:#fff;font-size:11px;font-weight:700}
+  /* CONTENT PANELS */
+  .doc{max-width:1000px;margin:0 auto;padding:26px 22px 60px}
+  .doc h2{color:var(--navy);font-size:22px;margin:6px 0 4px}
+  .doc h3{color:var(--navy2);font-size:16px;margin:26px 0 8px;border-bottom:2px solid var(--line);padding-bottom:4px}
+  .doc p{line-height:1.6;font-size:14px}
+  .doc .lead{color:var(--muted);font-size:14.5px}
+  .formula{background:var(--navy);color:#fff;text-align:center;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:20px;padding:16px;border-radius:8px;margin:14px 0;letter-spacing:1px}
+  .formula small{display:block;color:#b9cbe0;font-size:12px;letter-spacing:0;margin-top:6px;font-family:inherit}
+  table.t{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.06);border-radius:8px;overflow:hidden}
+  table.t th{background:var(--navy);color:#fff;text-align:left;padding:9px 11px;font-size:12.5px;font-weight:600}
+  table.t td{padding:8px 11px;border-top:1px solid var(--line);vertical-align:top;line-height:1.45}
+  table.t tr:nth-child(even) td{background:#fafbfc}
+  .w{font-weight:700;color:var(--navy2);white-space:nowrap}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:12px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .card h4{margin:0 0 4px;color:var(--navy);font-size:14px}
+  .card .meta{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+  .card p{font-size:12.5px;margin:0;line-height:1.45}
+  .tag{display:inline-block;background:#eaf1f8;color:var(--navy2);font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;margin:4px 4px 0 0}
+  a{color:var(--c1)}
+  ul.refs li{margin-bottom:10px;font-size:13px;line-height:1.5}
+  .note-box{background:#fff7e6;border:1px solid #f0d9a8;border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5;margin:12px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Evacuation Inform Index — EII</h1>
+  <p>A composite "risk of evacuating vs. risk of staying" model · <b>live data: INFORM Severity Index, April 2026 (ACAPS / EU JRC)</b> · 104 active crises</p>
+</header>
+<nav>
+  <button data-tab="map" class="active">🗺 Map</button>
+  <button data-tab="method">📐 Methodology</button>
+  <button data-tab="vars">⚖ Variables &amp; Weights</button>
+  <button data-tab="data">🗄 Data Sources</button>
+  <button data-tab="refs">📚 References</button>
+</nav>
+<main>
+
+<!-- ===================== MAP ===================== -->
+<section id="map-panel" class="panel active">
+  <div id="mapwrap">
+    <div id="map"></div>
+    <div class="controls">
+      <label for="metric">Color markers by</label>
+      <select id="metric">
+        <option value="edi">EII (evacuate ÷ stay)</option>
+        <option value="rss">Risk of Staying (RSS)</option>
+        <option value="rse">Risk of Evacuating (RSE)</option>
+      </select>
+      <div class="note"><b>Real data.</b> RSS = INFORM <i>Conditions of people affected</i>; RSE = INFORM <i>Complexity</i> (access, safety, operating environment), each rescaled 1→5. Bubble size scales with the metric. Click a marker for the full breakdown.</div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+</section>
+
+<!-- ===================== METHODOLOGY ===================== -->
+<section id="method-panel" class="panel">
+  <div class="doc">
+    <h2>Methodology</h2>
+    <p class="lead">The Evacuation Inform Index (EII) is structured as a ratio — the Risk Score for Evacuating (RSE) divided by the Risk Score for Staying (RSS) — synthesising the INFORM Severity 3-dimension structure with the IOM RICD macro/micro split.</p>
+    <div class="formula">EII = RSE / RSS<small>EII &gt; 1.0 → evacuation is riskier than staying &nbsp;|&nbsp; EII &lt; 1.0 → staying is riskier than evacuating</small></div>
+    <div class="note-box"><b>Live data grounding.</b> The map is populated with the real <b>INFORM Severity Index, April 2026</b> (ACAPS / EU JRC, 104 active crises, via HDX). Each crisis's <i>Conditions of people affected</i> sub-score drives <b>RSS</b> (how severe it is to remain) and its <i>Complexity</i> sub-score — access constraints, society &amp; safety, operating environment — drives <b>RSE</b> (how hard/dangerous it is to move). Both are rescaled from INFORM's 1–10 to the 1–5 EII scale. Layers 2–3 (route availability, personal modifiers) below are the design roadmap; the current build uses INFORM as the live backbone.</div>
+    <div class="note-box"><b>Design note.</b> Pure ratios destabilise as the denominator nears zero. A floor of <b>RSS = 0.5</b> (on a 5-point scale) is applied, and the EII is always shown alongside both component scores — never as the sole output.</div>
+
+    <h3>Three-layer architecture</h3>
+    <table class="t">
+      <tr><th>Layer</th><th>Function</th><th>Precedent</th></tr>
+      <tr><td><b>Layer 1 — Objective Risk Score (ORS)</b><br><span class="w">50%</span></td><td>Universal factors, identical for everyone in the geography (hostilities, conflict risk, natural-hazard life risk)</td><td>INFORM Severity, ACLED, GCRI</td></tr>
+      <tr><td><b>Layer 2 — Infrastructure &amp; Access (IAS)</b><br><span class="w">35%</span></td><td>Availability of evacuation routes, resources &amp; connectivity</td><td>ACAPS Humanitarian Access, IDMC</td></tr>
+      <tr><td><b>Layer 3 — Personal Vulnerability Modifier (PVM)</b><br><span class="w">15%</span></td><td>Demographic / household factors applied as a multiplicative modifier (0.7×–1.3×)</td><td>CDC SVI, IOM RICD micro-level</td></tr>
+    </table>
+
+    <h3>Aggregation — weighted geometric mean</h3>
+    <p>Indicators aggregate by weighted geometric mean rather than arithmetic mean, so an extreme imbalance (e.g. all infrastructure unavailable) cannot be compensated by a low score elsewhere — the same logic used by the Human Development Index and INFORM Risk.</p>
+    <div class="formula" style="font-size:17px">Score = V₁<sup>w₁</sup> × V₂<sup>w₂</sup> × … × Vₙ<sup>wₙ</sup><small>Vᵢ = normalised 1–5 score · wᵢ = weight (Σw = 1.0)</small></div>
+
+    <h3>Recommended build sequence</h3>
+    <table class="t">
+      <tr><th>Phase</th><th>Method</th><th>Purpose</th></tr>
+      <tr><td>1 · Variable design</td><td>Delphi + Budget Allocation (8–12 experts, 2 rounds)</td><td>Set initial layer &amp; sub-variable weights</td></tr>
+      <tr><td>2 · Weight validation</td><td>Fuzzy AHP (triangular numbers, Buckley's geometric mean)</td><td>Validate contested weights under uncertainty</td></tr>
+      <tr><td>3 · Calibration</td><td>Historical case testing (Sudan '23, Ukraine '22, Kabul '21, Lebanon '06, Haiti '10) + PCA</td><td>Check the index matches real decisions; prune redundant variables</td></tr>
+    </table>
+
+    <h3>Constraint layers (not scored)</h3>
+    <p><b>Financial feasibility filter</b> — a second-stage check on whether the recommended action is affordable (transport, accommodation, asset-liquidation loss, income disruption). <b>Legal / rights (UDHR Art. 13)</b> — flags exit-visa requirements, travel bans or closure orders that restrict self-evacuation.</p>
+  </div>
+</section>
+
+<!-- ===================== VARIABLES ===================== -->
+<section id="vars-panel" class="panel">
+  <div class="doc">
+    <h2>Variables &amp; Proposed Weights</h2>
+    <p class="lead">Preliminary weights synthesised from INFORM, ACLED and FSI logic — to be validated by AHP expert surveys.</p>
+
+    <h3>Layer 1 — Objective Risk Score · 50%</h3>
+    <table class="t">
+      <tr><th>Variable</th><th>Data source</th><th>Weight</th><th>Rationale</th></tr>
+      <tr><td>Active hostilities</td><td>ACLED: fatalities, attack types, proximity</td><td class="w">20%</td><td>Immediate life threat; fastest-changing → heaviest weight</td></tr>
+      <tr><td>Likelihood of future hostility</td><td>GCRI risk score; FSI security; ICEWS</td><td class="w">15%</td><td>Forward-looking; less certain than observed events</td></tr>
+      <tr><td>Life risk (non-conflict)</td><td>IDMC, FEWS NET — flood, quake, fire</td><td class="w">15%</td><td>Natural-hazard exposure alongside conflict</td></tr>
+    </table>
+
+    <h3>Layer 2 — Infrastructure &amp; Access · 35%</h3>
+    <table class="t">
+      <tr><th>Variable</th><th>Data source</th><th>Weight</th><th>Rationale</th></tr>
+      <tr><td>Evacuation route availability</td><td>Flight seats, road/border status, satellite imagery</td><td class="w">12%</td><td>No route = evacuation impossible</td></tr>
+      <tr><td>Infrastructure availability (stay)</td><td>Internet, energy, food, water (IPC, FEWS NET)</td><td class="w">10%</td><td>Determines survivability if staying</td></tr>
+      <tr><td>Security / threat alerts</td><td>OSAC, embassy alerts, local-language news</td><td class="w">8%</td><td>Near-real-time signal, both directions</td></tr>
+      <tr><td>Weather</td><td>NOAA, Copernicus</td><td class="w">5%</td><td>Modifier on route viability &amp; shelter</td></tr>
+    </table>
+
+    <h3>Layer 3 — Personal Vulnerability Modifier · 15% (multiplicative 0.7×–1.3×)</h3>
+    <table class="t">
+      <tr><th>Variable</th><th>Operationalisation</th><th>Direction of effect</th></tr>
+      <tr><td>Young children (&lt;12)</td><td>CDC SVI "age ≤17"; self-report</td><td>↑ RSE (harder to move) &amp; ↑ RSS (more vulnerable)</td></tr>
+      <tr><td>Elderly (65+)</td><td>CDC SVI "age 65+"; self-report</td><td>↑ RSE (mobility) &amp; ↑ RSS (medical risk)</td></tr>
+      <tr><td>Gender / gendered risk</td><td>UNHCR GBV risk indicators</td><td>↑ RSS in conflict zones with GBV risk</td></tr>
+      <tr><td>Prior evacuation experience</td><td>Self-assessed preparedness</td><td>↓ RSE (more capable evacuee)</td></tr>
+      <tr><td>Financial resources</td><td>Self-reported</td><td>↓ RSE when high; ↑ RSS when low</td></tr>
+    </table>
+
+    <h3>Weighting methods considered</h3>
+    <table class="t">
+      <tr><th>Method</th><th>Subjectivity</th><th>Data</th><th>Defensibility</th><th>Use</th></tr>
+      <tr><td>Equal weights</td><td>None</td><td>None</td><td>Low</td><td>Baseline &amp; sensitivity</td></tr>
+      <tr><td>Budget allocation (BAP)</td><td>High</td><td>None</td><td>Medium</td><td>Rapid prototyping</td></tr>
+      <tr><td>AHP</td><td>Medium</td><td>Expert survey</td><td>High</td><td>Published index</td></tr>
+      <tr><td>Fuzzy AHP</td><td>Low–Med</td><td>Expert survey</td><td>Very high</td><td>Ambiguous variables</td></tr>
+      <tr><td>PCA / factor analysis</td><td>None</td><td>Historical</td><td>Medium</td><td>Validation &amp; pruning</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== DATA SOURCES ===================== -->
+<section id="data-panel" class="panel">
+  <div class="doc">
+    <h2>Data Sources</h2>
+    <p class="lead">Feeds that populate the index. All free unless noted.</p>
+    <div class="cards" id="srcgrid"></div>
+  </div>
+</section>
+
+<!-- ===================== REFERENCES ===================== -->
+<section id="refs-panel" class="panel">
+  <div class="doc">
+    <h2>Reference Indices &amp; Key Papers</h2>
+    <h3>Methodological precedents</h3>
+    <div class="cards">
+      <div class="card"><h4>INFORM Severity Index</h4><div class="meta">ACAPS / EU JRC · monthly</div><p>3 weighted dimensions (Impact 20% · Conditions 50% · Complexity 30%), 1–5 scale. Closest analogue.</p><a href="https://www.acaps.org/en/thematics/all-topics/inform-severity-index" target="_blank" rel="noopener">acaps.org →</a></div>
+      <div class="card"><h4>ACLED Conflict Index</h4><div class="meta">ACLED · weekly</div><p>Deadliness 35 · Danger to civilians 25 · Diffusion 20 · Fragmentation 20; non-linear root aggregation.</p><a href="https://acleddata.com/conflict-index-2026-watchlist" target="_blank" rel="noopener">acleddata.com →</a></div>
+      <div class="card"><h4>IOM RICD</h4><div class="meta">IOM CMIL · project-based</div><p>Two-tier macro (spatial risk) + micro (community) model — the structural precedent for base score × personal modifier.</p><a href="https://environmentalmigration.iom.int/CMIL-AP/RICD" target="_blank" rel="noopener">iom.int →</a></div>
+      <div class="card"><h4>IDMC Risk Model 2.0</h4><div class="meta">IDMC · annual</div><p>Probabilistic displacement from natural hazards — feeds the "risk of staying" dimension.</p><a href="https://www.internal-displacement.org/database/global-displacement-risk-model/methodology/" target="_blank" rel="noopener">internal-displacement.org →</a></div>
+      <div class="card"><h4>Fragile States Index</h4><div class="meta">Fund for Peace · annual</div><p>12 indicators, CAST text-analysis triangulation — template for structural / minor variables.</p><a href="https://fragilestatesindex.org" target="_blank" rel="noopener">fragilestatesindex.org →</a></div>
+      <div class="card"><h4>CDC Social Vulnerability Index</h4><div class="meta">CDC/ATSDR · biennial</div><p>16 variables, 4 equally-weighted themes, percentile ranking — the personal-vulnerability layer.</p><a href="https://www.atsdr.cdc.gov/placeandhealth/svi/index.html" target="_blank" rel="noopener">atsdr.cdc.gov →</a></div>
+      <div class="card"><h4>Global Conflict Risk Index</h4><div class="meta">EU JRC · annual</div><p>Conflict-onset risk — separates active conflict (ACLED) from forward-looking risk.</p><a href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" rel="noopener">jrc.ec.europa.eu →</a></div>
+      <div class="card"><h4>OECD/JRC Composite Handbook</h4><div class="meta">OECD &amp; JRC</div><p>Definitive reference for normalisation, aggregation, weighting &amp; sensitivity analysis.</p><a href="https://publications.jrc.ec.europa.eu/repository/handle/JRC31473" target="_blank" rel="noopener">publications.jrc.ec.europa.eu →</a></div>
+    </div>
+
+    <h3>Key papers</h3>
+    <ul class="refs">
+      <li>Beccari, B. (2016). <i>A Comparative Analysis of Disaster Risk, Vulnerability and Resilience Composite Indicators.</i> PLoS Currents Disasters, PMC4807925 — reviews 106 index methodologies.</li>
+      <li><i>Can severity of a humanitarian crisis be quantified? Assessment of the INFORM severity index.</i> Globalization &amp; Health (2023). DOI:10.1186/s12992-023-00907-y — identifies governance &amp; access as strongest predictors.</li>
+      <li>Al Fozaie (2022). <i>A Guide to Integrating Expert Opinion and Fuzzy AHP When Generating Weights for Composite Indices.</i> Advances in Fuzzy Systems. DOI:10.1155/2022/3396862.</li>
+      <li>OECD/JRC (2008). <i>Handbook on Constructing Composite Indicators.</i> OECD Publishing.</li>
+      <li>Saaty, T.L. (1990). <i>How to Make a Decision: The Analytic Hierarchy Process.</i> EJOR 48(1), 9–26.</li>
+      <li>ACAPS Ukraine Severity Model Methodology Note (March 2024) — worked subnational example.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js"></script>
+<script>
+/* ---------- Live data from INFORM Severity Index (see data.js) ---------- */
+const LOCS = window.EII_DATA || [];
+const FLOOR = 0.5;
+function edi(d){ return d.rse / Math.max(d.rss, FLOOR); }
+
+/* color ramp blue(low)->red(high) over a value range */
+function ramp(v,min,max){
+  const t=Math.max(0,Math.min(1,(v-min)/(max-min)));
+  const stops=[[44,127,184],[120,160,150],[215,120,30],[215,48,31]];
+  const seg=t*(stops.length-1), i=Math.floor(seg), f=seg-i;
+  const a=stops[i], b=stops[Math.min(i+1,stops.length-1)];
+  const c=a.map((x,k)=>Math.round(x+(b[k]-x)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+const map=L.map('map',{worldCopyJump:true}).setView([20,25],3);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+  attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:18
+}).addTo(map);
+
+let layer=L.layerGroup().addTo(map);
+
+const RANGES={edi:[0.7,1.2], rss:[1.5,5], rse:[1.5,5]};
+const LABELS={edi:"EII (evacuate ÷ stay)", rss:"Risk of Staying", rse:"Risk of Evacuating"};
+
+function metricVal(d,m){ return m==="edi"?edi(d):d[m]; }
+
+function draw(metric){
+  layer.clearLayers();
+  const [mn,mx]=RANGES[metric];
+  LOCS.forEach(d=>{
+    const v=metricVal(d,metric);
+    const col=ramp(v,mn,mx);
+    const r=8+ (Math.max(0,Math.min(1,(v-mn)/(mx-mn)))*14);
+    const m=L.circleMarker([d.lat,d.lng],{radius:r,fillColor:col,color:'#fff',weight:1.5,fillOpacity:.88});
+    const e=edi(d);
+    const verdict = e>1.05 ? '<span class="pill" style="background:#d7301f">Staying favored</span>'
+                  : e<0.95 ? '<span class="pill" style="background:#2c7fb8">Evacuation favored</span>'
+                  : '<span class="pill" style="background:#888">Near parity</span>';
+    m.bindPopup(`<div class="lp"><h3>${d.crisis}</h3>
+      <div class="edi">EII = ${e.toFixed(2)} &nbsp;${verdict}</div>
+      <table>
+        <tr><td>Risk of Evacuating (RSE) &mdash; Complexity</td><td>${d.rse.toFixed(1)}</td></tr>
+        <tr><td>Risk of Staying (RSS) &mdash; Conditions</td><td>${d.rss.toFixed(1)}</td></tr>
+        <tr><td>Impact of crisis</td><td>${d.impact?d.impact.toFixed(1):'—'}</td></tr>
+        <tr><td>INFORM Severity (1&ndash;10)</td><td>${d.informIdx}</td></tr>
+        <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
+      </table>
+      <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${d.drivers||'—'}</p></div>`);
+    layer.addLayer(m);
+  });
+  drawLegend(metric);
+}
+
+function drawLegend(metric){
+  const [mn,mx]=RANGES[metric];
+  const steps=4, el=document.getElementById('legend');
+  let html=`<b>${LABELS[metric]}</b>`;
+  for(let i=0;i<steps;i++){
+    const v=mn+(mx-mn)*(i/(steps-1));
+    html+=`<div><i style="background:${ramp(v,mn,mx)}"></i>${v.toFixed(metric==='edi'?2:1)}${i===0?' (lower)':i===steps-1?' (higher)':''}</div>`;
+  }
+  if(metric==='edi') html+=`<div style="margin-top:5px;font-size:11px;color:#5b6b7a">&gt;1 stay riskier · &lt;1 evacuate riskier</div>`;
+  el.innerHTML=html;
+}
+
+document.getElementById('metric').addEventListener('change',e=>draw(e.target.value));
+draw('edi');
+
+/* ---------- Data sources grid ---------- */
+const SOURCES=[
+  ["ACAPS / INFORM Severity","Global crisis severity, humanitarian conditions","Monthly","Free","https://acaps.org"],
+  ["ACLED","Conflict events, fatalities, actors, location","Weekly","Free tier","https://acleddata.com"],
+  ["Fragile States Index","12-indicator state fragility, 178 countries","Annual","Free","https://fragilestatesindex.org"],
+  ["IOM RICD","Climate displacement risk (macro + micro)","Project","Free","https://environmentalmigration.iom.int"],
+  ["IDMC Risk Model","Displacement probability from natural hazards","Annual","Free","https://www.internal-displacement.org"],
+  ["Global Conflict Risk Index","Conflict-onset risk, EU early warning","Annual","Free","https://drmkc.jrc.ec.europa.eu/inform-index"],
+  ["IPC Food Security Scale","Food insecurity, 5-phase classification","Bi-annual","Free","https://ipcinfo.org"],
+  ["FEWS NET","Food security forecasts, 4–6 months out","Monthly","Free","https://fews.net"],
+  ["CDC SVI","Demographic vulnerability, US census tracts","Biennial","Free","https://atsdr.cdc.gov"],
+  ["ACAPS Humanitarian Access","Access constraints, movement restrictions","Periodic","Free","https://acaps.org"],
+  ["UNHCR Population Data","Refugee / IDP flows","Annual","Free","https://unhcr.org/refugee-statistics"],
+  ["OSAC / Embassy Alerts","Security threat alerts, advisories","Real-time","Free","https://osac.gov"],
+  ["Copernicus EMS","Satellite imagery, disaster &amp; route mapping","Event","Free","https://emergency.copernicus.eu"],
+  ["NOAA / Copernicus C3S","Weather forecasts, extreme events","Daily","Free","https://climate.copernicus.eu"],
+  ["FlightAware / OAG","Flight availability, seat &amp; route data","Real-time","Paid","https://flightaware.com"],
+  ["HERE / Google Maps API","Road status, border-crossing conditions","Real-time","Paid*","https://developer.here.com"]
+];
+document.getElementById('srcgrid').innerHTML = SOURCES.map(s=>`
+  <div class="card"><h4>${s[0]}</h4>
+    <div class="meta">${s[2]} · ${s[3]}</div>
+    <p>${s[1]}</p>
+    <a href="${s[4]}" target="_blank" rel="noopener">${s[4].replace('https://','')} →</a>
+  </div>`).join('');
+
+/* ---------- Tab switching ---------- */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.tab+'-panel').classList.add('active');
+    if(b.dataset.tab==='map') setTimeout(()=>map.invalidateSize(),50);
+  });
+});
+</script>
+</body>
+</html>
