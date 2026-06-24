@@ -82,7 +82,7 @@ def load_env():
                 continue
             k, v = line.split("=", 1)
             env[k.strip()] = v.strip().strip('"').strip("'")
-    for k in ("TAVILY_API_KEY", "ACLED_API_KEY", "ACLED_EMAIL", "NASA_API_KEY"):
+    for k in ("TAVILY_API_KEY", "ACLED_EMAIL", "ACLED_PASSWORD", "NASA_API_KEY"):
         if os.environ.get(k):
             env[k] = os.environ[k]
     return env
@@ -113,34 +113,105 @@ def tavily_news(key, query, days=60, max_results=10):
         })
     return {"answer": out.get("answer"), "items": items}
 
-def acled_timeline(key, email, country, months=18):
-    name = ACLED_ALIAS.get(country, country)
-    since = (datetime.utcnow() - timedelta(days=months * 31)).strftime("%Y-%m-%d")
-    url = "https://api.acleddata.com/acled/read?" + urllib.parse.urlencode({
-        "key": key, "email": email, "country": name,
-        "event_date": since, "event_date_where": ">=",
-        "fields": "event_date|event_type|fatalities", "limit": 5000,
-    })
-    out = http_json(url)
-    buckets, types = {}, {}
-    for e in out.get("data", []):
-        m = (e.get("event_date") or "")[:7]
-        if not m:
-            continue
-        b = buckets.setdefault(m, {"month": m, "events": 0, "fatalities": 0})
-        b["events"] += 1
+# ACLED migrated to OAuth2 in 2025: log in with email+password -> Bearer token
+# (valid 24h) -> query https://acleddata.com/api/acled/read. The legacy
+# api.acleddata.com key+email endpoint is deprecated.
+ACLED_OAUTH_URL = "https://acleddata.com/oauth/token"
+ACLED_READ_URL = "https://acleddata.com/api/acled/read"
+_ACLED_TOKEN = {"token": None, "exp": 0}
+
+def acled_token(email, password):
+    if _ACLED_TOKEN["token"] and _ACLED_TOKEN["exp"] - 120 > time.time():
+        return _ACLED_TOKEN["token"]
+    tp = os.path.join(CACHE_DIR, "acled_token.json")
+    if os.path.exists(tp):
         try:
-            b["fatalities"] += int(e.get("fatalities") or 0)
-        except (TypeError, ValueError):
+            c = json.load(open(tp))
+            if c.get("exp", 0) - 120 > time.time():
+                _ACLED_TOKEN.update(c)
+                return c["token"]
+        except Exception:
             pass
-        t = e.get("event_type") or "Other"
-        types[t] = types.get(t, 0) + 1
+    body = urllib.parse.urlencode({
+        "username": email, "password": password, "grant_type": "password",
+        "client_id": "acled", "scope": "authenticated",
+    }).encode()
+    req = urllib.request.Request(
+        ACLED_OAUTH_URL, data=body, method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "EII/1.0"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        out = json.load(r)
+    tok = out["access_token"]
+    exp = time.time() + int(out.get("expires_in", 86400))
+    _ACLED_TOKEN.update({"token": tok, "exp": exp})
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        json.dump({"token": tok, "exp": exp}, open(tp, "w"))
+    except Exception:
+        pass
+    return tok
+
+def acled_timeline(email, password, country, months=18):
+    name = ACLED_ALIAS.get(country, country)
+    token = acled_token(email, password)
+    # Some access tiers serve only data >=12 months old; request a wide lower
+    # bound and let the API enforce its own recency cutoff. Page ascending.
+    since = (datetime.utcnow() - timedelta(days=(months + 14) * 31)).strftime("%Y-%m-%d")
+    buckets, types = {}, {}
+    newest, cutoff, total_rows, truncated = None, None, 0, False
+    MAX_PAGES = 30
+    page = 1
+    while page <= MAX_PAGES:
+        url = ACLED_READ_URL + "?" + urllib.parse.urlencode({
+            "country": name, "event_date": since, "event_date_where": ">=",
+            "fields": "event_date|event_type|fatalities", "limit": 5000, "page": page,
+        })
+        out = http_json(url, headers={"Authorization": "Bearer " + token})
+        if cutoff is None:
+            try:
+                cutoff = out["data_query_restrictions"]["date_recency"].get("date")
+            except Exception:
+                cutoff = None
+        rows = out.get("data") or []
+        if not rows:
+            break
+        total_rows += len(rows)
+        for e in rows:
+            d = e.get("event_date") or ""
+            m = d[:7]
+            if not m:
+                continue
+            if newest is None or d > newest:
+                newest = d
+            b = buckets.setdefault(m, {"month": m, "events": 0, "fatalities": 0})
+            b["events"] += 1
+            try:
+                b["fatalities"] += int(e.get("fatalities") or 0)
+            except (TypeError, ValueError):
+                pass
+            t = e.get("event_type") or "Other"
+            types[t] = types.get(t, 0) + 1
+        if len(rows) < 5000:
+            break
+        page += 1
+    else:
+        truncated = True
+    kept = sorted(buckets.values(), key=lambda x: x["month"])[-months:]
+    note = ""
+    if cutoff:
+        note = f"Your ACLED access tier serves data up to {cutoff} (~12-month embargo)."
+    if truncated:
+        note += " High event volume — earliest portion shown; recent months may be undercounted."
     return {
         "country_used": name,
-        "months": sorted(buckets.values(), key=lambda x: x["month"]),
+        "months": kept,
         "by_type": sorted(types.items(), key=lambda x: -x[1]),
-        "total_events": sum(b["events"] for b in buckets.values()),
-        "total_fatalities": sum(b["fatalities"] for b in buckets.values()),
+        "total_events": sum(b["events"] for b in kept),
+        "total_fatalities": sum(b["fatalities"] for b in kept),
+        "newest": newest,
+        "cutoff": cutoff,
+        "truncated": truncated,
+        "note": note,
     }
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -234,9 +305,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             days = 60
         env = load_env()
         tk = env.get("TAVILY_API_KEY")
-        ak, ae = env.get("ACLED_API_KEY"), env.get("ACLED_EMAIL")
+        ae, ap = env.get("ACLED_EMAIL"), env.get("ACLED_PASSWORD")
         nocache = "nocache" in q
-        ckey = f"{crisis}|{country}|d{days}|t{bool(tk)}|a{bool(ak and ae)}"
+        ckey = f"{crisis}|{country}|d{days}|t{bool(tk)}|a{bool(ae and ap)}"
         if not nocache:
             hit = cache_get(ckey)
             if hit:
@@ -255,10 +326,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 resp["errors"].append(f"tavily: {e}")
         else:
             resp["errors"].append("no_tavily_key")
-        resp["keys"]["acled"] = bool(ak and ae)
-        if ak and ae:
+        resp["keys"]["acled"] = bool(ae and ap)
+        if ae and ap:
             try:
-                resp["acled"] = acled_timeline(ak, ae, country)
+                resp["acled"] = acled_timeline(ae, ap, country)
                 usage_bump("acled")
             except Exception as e:
                 resp["errors"].append(f"acled: {e}")

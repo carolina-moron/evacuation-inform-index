@@ -505,7 +505,8 @@ function buildDetailHTML(d,nasaHtml){
     if(a.by_type && a.by_type.length){
       h+='<div style="margin-top:10px;font-size:12px">'+a.by_type.slice(0,5).map(t=>`<span class="stat">${esc(t[0])}: <b style="display:inline;font-size:12px">${t[1]}</b></span>`).join('')+'</div>';
     }
-    h+=`<div style="font-size:10.5px;color:#8a97a4;margin-top:6px">ACLED matched country: ${esc(a.country_used)}</div>`;
+    h+=`<div style="font-size:10.5px;color:#8a97a4;margin-top:6px">ACLED matched country: ${esc(a.country_used)}${a.newest?' · latest event '+fmtDate(a.newest):''} · source: <a href="https://acleddata.com" target="_blank" rel="noopener">acleddata.com</a></div>`;
+    if(a.note) h+=`<div style="font-size:10.5px;color:#a3793a;margin-top:3px">ℹ️ ${esc(a.note)}</div>`;
   }
   // ---- ACLED configured but returned nothing usable -> surface why (debug aid) ----
   if(k.acled && !(a && a.months && a.months.length)){
