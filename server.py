@@ -15,6 +15,28 @@ PORT = int(os.environ.get("PORT", "8000"))
 CACHE_DIR = os.path.join(ROOT, ".cache")
 CACHE_TTL = 6 * 3600  # 6 hours — repeat clicks within this window are free
 
+# ---- API-usage tracking (so you don't blow through Tavily credits) ----
+# Tavily bills per *search* (basic = 1 credit), not per token. We count every
+# real outbound call here; cache hits cost nothing and are not counted.
+USAGE_PATH = os.path.join(CACHE_DIR, "usage.json")
+SESSION_USAGE = {"tavily": 0, "acled": 0, "earth_image": 0}  # since this process started
+
+def usage_bump(kind):
+    SESSION_USAGE[kind] = SESSION_USAGE.get(kind, 0) + 1
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        data = json.load(open(USAGE_PATH)) if os.path.exists(USAGE_PATH) else {}
+        data[kind] = data.get(kind, 0) + 1
+        json.dump(data, open(USAGE_PATH, "w"))
+    except Exception:
+        pass
+
+def usage_read():
+    try:
+        return json.load(open(USAGE_PATH)) if os.path.exists(USAGE_PATH) else {}
+    except Exception:
+        return {}
+
 def _cache_path(key):
     return os.path.join(CACHE_DIR, hashlib.sha1(key.encode()).hexdigest()[:16] + ".json")
 
@@ -142,6 +164,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.api_detail()
         if self.path.startswith("/api/earth-image"):
             return self.api_earth_image()
+        if self.path.startswith("/api/usage"):
+            return self.api_usage()
         return super().do_GET()
 
     def api_earth_image(self):
@@ -180,6 +204,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                          "detail": data[:200].decode("utf-8", "ignore")}, 502)
                 os.makedirs(CACHE_DIR, exist_ok=True)
                 open(cpath, "wb").write(data)
+                usage_bump("earth_image")
             except Exception as e:
                 return self.send_json({"error": "nasa_unreachable", "detail": str(e)}, 502)
         self.send_response(200)
@@ -190,27 +215,42 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def api_usage(self):
+        """Report API spend so the user can watch their Tavily credits."""
+        self.send_json({
+            "total": usage_read(),          # cumulative across all runs (persisted)
+            "session": SESSION_USAGE,        # since this server process started
+            "note": "Tavily basic search = 1 API credit. Cached results (≤6h) cost 0. "
+                    "Check your monthly credit limit at app.tavily.com.",
+        })
+
     def api_detail(self):
         q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         crisis = (q.get("crisis") or [""])[0]
         country = (q.get("country") or [""])[0]
+        try:
+            days = max(1, min(365, int((q.get("days") or ["60"])[0])))
+        except ValueError:
+            days = 60
         env = load_env()
         tk = env.get("TAVILY_API_KEY")
         ak, ae = env.get("ACLED_API_KEY"), env.get("ACLED_EMAIL")
         nocache = "nocache" in q
-        ckey = f"{crisis}|{country}|t{bool(tk)}|a{bool(ak and ae)}"
+        ckey = f"{crisis}|{country}|d{days}|t{bool(tk)}|a{bool(ak and ae)}"
         if not nocache:
             hit = cache_get(ckey)
             if hit:
                 hit["cached"] = True
                 return self.send_json(hit)
-        resp = {"crisis": crisis, "country": country, "cached": False,
+        resp = {"crisis": crisis, "country": country, "cached": False, "days": days,
                 "tavily": None, "acled": None, "errors": [], "keys": {}}
         resp["keys"]["tavily"] = bool(tk)
         if tk:
             try:
                 resp["tavily"] = tavily_news(
-                    tk, f"{country} {crisis} latest conflict, security and humanitarian developments")
+                    tk, f"{country} {crisis} latest conflict, security and humanitarian developments",
+                    days=days)
+                usage_bump("tavily")  # a real search credit was spent
             except Exception as e:
                 resp["errors"].append(f"tavily: {e}")
         else:
@@ -219,6 +259,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if ak and ae:
             try:
                 resp["acled"] = acled_timeline(ak, ae, country)
+                usage_bump("acled")
             except Exception as e:
                 resp["errors"].append(f"acled: {e}")
         else:

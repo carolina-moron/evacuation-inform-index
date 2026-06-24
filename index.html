@@ -97,6 +97,34 @@
   .nasa-img{width:100%;display:block;border-radius:8px;border:1px solid var(--line);background:#0b1622;min-height:140px;opacity:.35;transition:opacity .35s}
   .nasa-img.on{opacity:1}
   .nasa-cap{font-size:10.5px;color:#8a97a4;margin:4px 0 2px}
+  /* LIVE TAB */
+  .live-pick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 18px}
+  .live-pick label{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .live-pick select{flex:1;min-width:220px;max-width:520px;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:14px;background:#fff}
+  #live-panel .news a{font-size:14.5px}
+  #live-panel h4{color:var(--navy2);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin:22px 0 10px;border-bottom:2px solid var(--line);padding-bottom:5px}
+  #live-panel .ans{background:#eef4fb;border-left:3px solid var(--c1);padding:11px 13px;border-radius:6px;font-size:13.5px;line-height:1.55;margin-bottom:8px}
+  #live-panel .news{border:1px solid var(--line);border-radius:7px;padding:10px 13px;margin-bottom:9px}
+  #live-panel .news .m{font-size:11.5px;color:var(--muted);margin:3px 0}
+  #live-panel .news p{font-size:12.5px;color:#43505c;margin:5px 0 0;line-height:1.45}
+  #live-panel .bars{display:flex;align-items:flex-end;gap:3px;height:120px;padding:6px 0;border-bottom:1px solid var(--line)}
+  #live-panel .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+  #live-panel .bar .f{width:100%;background:var(--c5);border-radius:2px 2px 0 0}
+  #live-panel .bar .e{width:100%;background:#9ecae1;border-radius:2px 2px 0 0}
+  #live-panel .bar .lab{font-size:8.5px;color:var(--muted);margin-top:3px;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+  #live-panel .stat{display:inline-block;background:#f1f5f9;border-radius:6px;padding:5px 10px;font-size:12px;margin:0 6px 6px 0}
+  #live-panel .stat b{color:var(--navy);font-size:15px;display:block}
+  #live-panel .tl{list-style:none;padding:0;margin:0;border-left:2px solid var(--line)}
+  #live-panel .tl li{position:relative;padding:0 0 14px 16px}
+  #live-panel .tl li:before{content:"";position:absolute;left:-6px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--c1)}
+  #live-panel .tl .d{font-size:11px;color:var(--muted);font-weight:600}
+  #live-panel .tl a{font-size:13.5px;font-weight:600;text-decoration:none}
+  .tl-group .g,#live-panel .tl-group .g{font-size:12px;font-weight:700;color:var(--navy);background:#eef3f8;display:inline-block;padding:2px 9px;border-radius:10px;margin:6px 0 4px -2px}
+  .tl-group:before{display:none !important}
+  .tl-note{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .usage{background:#f1f5f9;border:1px solid var(--line);border-radius:7px;padding:8px 12px;font-size:12px;color:#43505c;margin-bottom:16px;line-height:1.5}
+  .usage b{color:var(--navy)}
+  .usage .u-note{display:block;color:var(--muted);font-size:11px;margin-top:3px}
 </style>
 </head>
 <body>
@@ -106,6 +134,7 @@
 </header>
 <nav>
   <button data-tab="map" class="active">🗺 Map</button>
+  <button data-tab="live">🔴 Live &amp; Conflict</button>
   <button data-tab="method">📐 Methodology</button>
   <button data-tab="vars">⚖ Variables &amp; Weights</button>
   <button data-tab="data">🗄 Data Sources</button>
@@ -127,6 +156,29 @@
       <div class="note"><b>Real data.</b> RSS = INFORM <i>Conditions of people affected</i>; RSE = INFORM <i>Complexity</i> (access, safety, operating environment), each rescaled 1→5. Bubble size scales with the metric. Click a marker for the full breakdown.</div>
     </div>
     <div class="legend" id="legend"></div>
+  </div>
+</section>
+
+<!-- ===================== LIVE & CONFLICT ===================== -->
+<section id="live-panel" class="panel">
+  <div class="doc">
+    <h2>Live Updates &amp; Conflict</h2>
+    <p class="lead">Per-crisis real-time developments (Tavily news) and the structured conflict timeline (ACLED) — the same feed as the map drawer, browsable here without the map. Every item links to its primary source.</p>
+    <div class="live-pick">
+      <label for="liveSel">Crisis</label>
+      <select id="liveSel"></select>
+      <label for="liveDays">Time window</label>
+      <select id="liveDays">
+        <option value="30">Last 30 days</option>
+        <option value="60" selected>Last 60 days</option>
+        <option value="90">Last 90 days</option>
+        <option value="180">Last 6 months</option>
+        <option value="365">Last 12 months</option>
+      </select>
+      <button type="button" id="liveRefresh" class="detailbtn" style="width:auto;padding:7px 14px;margin:0">↻ Refresh</button>
+    </div>
+    <div id="usageBar" class="usage"></div>
+    <div id="liveBody"><div class="spin">Select a crisis above to load live data…</div></div>
   </div>
 </section>
 
@@ -315,7 +367,7 @@ function metricVal(d,m){ return m==="edi"?edi(d):d[m]; }
 function draw(metric){
   layer.clearLayers();
   const [mn,mx]=RANGES[metric];
-  LOCS.forEach(d=>{
+  LOCS.forEach((d,idx)=>{
     const v=metricVal(d,metric);
     const col=ramp(v,mn,mx);
     const r=8+ (Math.max(0,Math.min(1,(v-mn)/(mx-mn)))*14);
@@ -334,7 +386,7 @@ function draw(metric){
         <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
       </table>
       <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${d.drivers||'—'}</p>
-      <button type="button" class="detailbtn" onclick="openDetail(${JSON.stringify(d.crisis)},${JSON.stringify(d.name)},${d.informIdx},${e.toFixed(2)},${d.lat},${d.lng})">📈 Live updates &amp; conflict timeline</button></div>`);
+      <button type="button" class="detailbtn" onclick="goLive(${idx})">📈 Live updates &amp; conflict timeline →</button></div>`);
     layer.addLayer(m);
   });
   drawLegend(metric);
@@ -387,30 +439,35 @@ function closeDetail(){ drawer.classList.remove('open'); }
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function fmtDate(s){ if(!s) return ''; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
 
-let _nasaImgHtml='';
-async function openDetail(crisis,country,informIdx,eii,lat,lng){
-  document.getElementById('dTitle').textContent=crisis;
-  document.getElementById('dSub').textContent=`${country} · INFORM ${informIdx}/10 · EII ${eii}`;
-  // NASA satellite snapshot for this location (server proxies the keyed Earth Imagery API).
-  _nasaImgHtml = (lat!=null && lng!=null) ? `<div class="nasa-wrap"><h4>🛰 NASA satellite view</h4>
+// NASA satellite snapshot for a location (server proxies the keyed Earth Imagery API).
+function nasaImgHTML(crisis,lat,lng){
+  return (lat!=null && lng!=null) ? `<div class="nasa-wrap"><h4>🛰 NASA satellite view</h4>
     <img class="nasa-img" src="/api/earth-image?lat=${lat}&lon=${lng}&dim=0.5"
       alt="NASA satellite imagery near ${esc(crisis)}"
       onload="this.classList.add('on')" onerror="this.closest('.nasa-wrap').remove()">
     <div class="nasa-cap">Landsat via NASA Earth Imagery API · ~55 km across · ${lat.toFixed(2)}, ${lng.toFixed(2)}</div></div>` : '';
+}
+function backendDownHTML(err){
+  return `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;
+}
+
+async function openDetail(crisis,country,informIdx,eii,lat,lng){
+  document.getElementById('dTitle').textContent=crisis;
+  document.getElementById('dSub').textContent=`${country} · INFORM ${informIdx}/10 · EII ${eii}`;
+  const nasa=nasaImgHTML(crisis,lat,lng);
   document.getElementById('dBody').innerHTML='<div class="spin">Fetching live data…</div>';
   drawer.classList.add('open');
   try{
     const r=await fetch(`/api/detail?crisis=${encodeURIComponent(crisis)}&country=${encodeURIComponent(country)}`);
     if(!r.ok) throw new Error('backend '+r.status);
-    renderDetail(await r.json());
+    document.getElementById('dBody').innerHTML=buildDetailHTML(await r.json(),nasa);
   }catch(err){
-    document.getElementById('dBody').innerHTML=
-      `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;
+    document.getElementById('dBody').innerHTML=backendDownHTML(err);
   }
 }
 
-function renderDetail(d){
-  const k=d.keys||{}; let h=_nasaImgHtml;
+function buildDetailHTML(d,nasaHtml){
+  const k=d.keys||{}; let h=nasaHtml||'';
   // ---- setup card if keys missing ----
   if(!k.tavily || !k.acled){
     h+=`<div class="setup"><b>Connect data sources to go live.</b><br>Add a <code>.env</code> file in the project folder:`;
@@ -450,30 +507,98 @@ function renderDetail(d){
     }
     h+=`<div style="font-size:10.5px;color:#8a97a4;margin-top:6px">ACLED matched country: ${esc(a.country_used)}</div>`;
   }
+  // ---- ACLED configured but returned nothing usable -> surface why (debug aid) ----
+  if(k.acled && !(a && a.months && a.months.length)){
+    const aerr=(d.errors||[]).find(x=>x.startsWith('acled:'));
+    h+='<h4>📊 Conflict timeline — ACLED</h4>';
+    h+=`<div class="setup">ACLED is configured but returned no usable events.${aerr?'<br><span style="color:#a36">'+esc(aerr)+'</span>':''}<br><br>If this looks like an auth error, re-check <code>ACLED_API_KEY</code> + <code>ACLED_EMAIL</code> (or whether ACLED's API still accepts key+email). Add <code>&amp;nocache=1</code> to force a retry.</div>`;
+  }
   // ---- Narrative timeline (news-derived, chronological) ----
   if(t && (t.items||[]).length){
     const dated=(t.items||[]).filter(it=>it.date && !isNaN(new Date(it.date)))
       .sort((x,y)=>new Date(y.date)-new Date(x.date));
     if(dated.length){
+      const span=`${fmtDate(dated[dated.length-1].date)} → ${fmtDate(dated[0].date)}`;
       h+='<h4>🕒 Narrative timeline — news-derived</h4>';
-      h+='<div style="font-size:11px;color:#5b6b7a;margin-bottom:8px">Recent reporting in chronological order'+(a&&a.months&&a.months.length?' (qualitative layer over the ACLED counts above)':' — connect ACLED for structured event counts')+'.</div>';
-      h+='<ul class="tl">'+dated.map(it=>`<li><div class="d">${fmtDate(it.date)} · ${esc(it.source||'')}</div><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a></li>`).join('')+'</ul>';
+      h+=`<div class="tl-note">${dated.length} reports, newest first · spanning <b>${span}</b>`+(a&&a.months&&a.months.length?' · qualitative layer over the ACLED counts above':'')+'. Widen the <b>Time window</b> above to reach further back.</div>';
+      let curKey='';
+      h+='<ul class="tl">';
+      dated.forEach(it=>{
+        const dd=new Date(it.date);
+        const key=dd.toLocaleDateString(undefined,{year:'numeric',month:'long'});
+        if(key!==curKey){ curKey=key; h+=`<li class="tl-group"><span class="g">${key}</span></li>`; }
+        h+=`<li><div class="d">${fmtDate(it.date)} · ${esc(it.source||'')}</div><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a></li>`;
+      });
+      h+='</ul>';
     }
   }
   if(d.cached) h+='<div style="font-size:10.5px;color:#8a97a4;margin-top:10px;text-align:right">⟳ cached (≤6h) — add <code>&nocache=1</code> to force refresh</div>';
-  document.getElementById('dBody').innerHTML=h||'<p>No data available.</p>';
+  return h||'<p>No data available.</p>';
+}
+
+/* ---------- Live & Conflict tab ---------- */
+const liveSel=document.getElementById('liveSel');
+const liveDays=document.getElementById('liveDays');
+let _liveLoaded=null;
+LOCS.map((d,i)=>({d,i})).sort((a,b)=>b.d.informIdx-a.d.informIdx).forEach(({d,i})=>{
+  const o=document.createElement('option');
+  o.value=i; o.textContent=`${d.crisis} — ${d.name} · INFORM ${d.informIdx}`;
+  liveSel.appendChild(o);
+});
+// Show API spend so you can watch your Tavily credits (cached loads cost 0).
+async function refreshUsage(){
+  try{
+    const r=await fetch('/api/usage'); if(!r.ok) return;
+    const u=await r.json(), s=u.session||{}, t=u.total||{};
+    document.getElementById('usageBar').innerHTML=
+      `🔎 <b>Tavily searches</b> — this session: <b>${s.tavily||0}</b> · all-time: <b>${t.tavily||0}</b>`
+      +` &nbsp;|&nbsp; 🛰 NASA snapshots: <b>${s.earth_image||0}</b> / <b>${t.earth_image||0}</b>`
+      +((t.acled||s.acled)?` &nbsp;|&nbsp; 📊 ACLED calls: <b>${s.acled||0}</b> / <b>${t.acled||0}</b>`:'')
+      +`<span class="u-note">${esc(u.note||'')}</span>`;
+  }catch(e){}
+}
+async function loadLive(idx){
+  const d=LOCS[idx]; if(!d) return;
+  const days=liveDays.value||'60';
+  const body=document.getElementById('liveBody');
+  body.innerHTML=`<div class="spin">Fetching live data for ${esc(d.crisis)} (last ${days} days)…</div>`;
+  _liveLoaded=idx;
+  const nasa=nasaImgHTML(d.crisis,d.lat,d.lng);
+  try{
+    const r=await fetch(`/api/detail?crisis=${encodeURIComponent(d.crisis)}&country=${encodeURIComponent(d.name)}&days=${days}`);
+    if(!r.ok) throw new Error('backend '+r.status);
+    body.innerHTML=buildDetailHTML(await r.json(),nasa);
+  }catch(err){ body.innerHTML=backendDownHTML(err); }
+  refreshUsage();
+}
+liveSel.addEventListener('change',()=>loadLive(+liveSel.value));
+liveDays.addEventListener('change',()=>{ if(_liveLoaded!==null) loadLive(+liveSel.value); });
+document.getElementById('liveRefresh').addEventListener('click',()=>loadLive(+liveSel.value));
+
+function activateTab(name){
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===name));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  const p=document.getElementById(name+'-panel'); if(p) p.classList.add('active');
+}
+// Map popup -> jump straight to the Live tab for that exact crisis.
+function goLive(idx){
+  activateTab('live');
+  liveSel.value=idx;
+  loadLive(idx);
 }
 
 /* ---------- Tab switching ---------- */
 document.querySelectorAll('nav button').forEach(b=>{
   b.addEventListener('click',()=>{
-    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    document.getElementById(b.dataset.tab+'-panel').classList.add('active');
+    activateTab(b.dataset.tab);
     if(b.dataset.tab==='map') setTimeout(()=>map.invalidateSize(),50);
+    if(b.dataset.tab==='live'){
+      refreshUsage();
+      if(_liveLoaded===null && liveSel.options.length) loadLive(+liveSel.value);
+    }
   });
 });
+refreshUsage();
 </script>
 </body>
 </html>
