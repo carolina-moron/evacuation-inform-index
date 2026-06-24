@@ -93,6 +93,10 @@
   .setup{background:#fff7e6;border:1px solid #f0d9a8;border-radius:8px;padding:14px;font-size:13px;line-height:1.55}
   .setup code{background:#fff;border:1px solid #e3d3a0;padding:1px 5px;border-radius:4px;font-size:12px}
   .detailbtn{margin-top:8px;width:100%;background:var(--navy2);color:#fff;border:none;padding:7px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .nasa-wrap{margin-bottom:6px}
+  .nasa-img{width:100%;display:block;border-radius:8px;border:1px solid var(--line);background:#0b1622;min-height:140px;opacity:.35;transition:opacity .35s}
+  .nasa-img.on{opacity:1}
+  .nasa-cap{font-size:10.5px;color:#8a97a4;margin:4px 0 2px}
 </style>
 </head>
 <body>
@@ -258,7 +262,7 @@
 <script src="data.js"></script>
 <script>
 /* ---------- Live data from INFORM Severity Index (see data.js) ---------- */
-const LOCS = window.EII_DATA || [];
+const LOCS = window.EII_DATA || window.EDI_DATA || [];
 const FLOOR = 0.5;
 function edi(d){ return d.rse / Math.max(d.rss, FLOOR); }
 
@@ -273,9 +277,33 @@ function ramp(v,min,max){
 }
 
 const map=L.map('map',{worldCopyJump:true}).setView([20,25],3);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+
+/* ---------- Base layers ---------- */
+const cartoLayer=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
   attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:18
-}).addTo(map);
+});
+
+/* NASA satellite imagery via GIBS (Global Imagery Browse Services, NASA EOSDIS).
+   Daily global true-color mosaics, no API key required. Imagery lags ~1–2 days,
+   so we request a recent date for the WMTS time dimension. */
+const NASA_DATE=new Date(Date.now()-2*864e5).toISOString().slice(0,10); // 2 days ago, UTC
+function gibsLayer(product,desc){
+  return L.tileLayer(
+    `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${product}/default/${NASA_DATE}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+    {attribution:`Imagery: NASA EOSDIS GIBS — ${desc} (${NASA_DATE})`,
+     maxNativeZoom:9, maxZoom:18, bounds:[[-85.0511,-180],[85.0511,180]]}
+  );
+}
+const viirsLayer=gibsLayer('VIIRS_SNPP_CorrectedReflectance_TrueColor','VIIRS/SNPP true color');
+const modisLayer=gibsLayer('MODIS_Terra_CorrectedReflectance_TrueColor','MODIS/Terra true color');
+
+cartoLayer.addTo(map);
+L.control.layers(
+  {'Reference map (CARTO)':cartoLayer,
+   '🛰 NASA satellite — VIIRS (daily)':viirsLayer,
+   '🛰 NASA satellite — MODIS (daily)':modisLayer},
+  {}, {position:'topleft', collapsed:false}
+).addTo(map);
 
 let layer=L.layerGroup().addTo(map);
 
@@ -306,7 +334,7 @@ function draw(metric){
         <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
       </table>
       <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${d.drivers||'—'}</p>
-      <button type="button" class="detailbtn" onclick="openDetail(${JSON.stringify(d.crisis)},${JSON.stringify(d.name)},${d.informIdx},${e.toFixed(2)})">📈 Live updates &amp; conflict timeline</button></div>`);
+      <button type="button" class="detailbtn" onclick="openDetail(${JSON.stringify(d.crisis)},${JSON.stringify(d.name)},${d.informIdx},${e.toFixed(2)},${d.lat},${d.lng})">📈 Live updates &amp; conflict timeline</button></div>`);
     layer.addLayer(m);
   });
   drawLegend(metric);
@@ -359,9 +387,16 @@ function closeDetail(){ drawer.classList.remove('open'); }
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function fmtDate(s){ if(!s) return ''; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
 
-async function openDetail(crisis,country,informIdx,eii){
+let _nasaImgHtml='';
+async function openDetail(crisis,country,informIdx,eii,lat,lng){
   document.getElementById('dTitle').textContent=crisis;
   document.getElementById('dSub').textContent=`${country} · INFORM ${informIdx}/10 · EII ${eii}`;
+  // NASA satellite snapshot for this location (server proxies the keyed Earth Imagery API).
+  _nasaImgHtml = (lat!=null && lng!=null) ? `<div class="nasa-wrap"><h4>🛰 NASA satellite view</h4>
+    <img class="nasa-img" src="/api/earth-image?lat=${lat}&lon=${lng}&dim=0.5"
+      alt="NASA satellite imagery near ${esc(crisis)}"
+      onload="this.classList.add('on')" onerror="this.closest('.nasa-wrap').remove()">
+    <div class="nasa-cap">Landsat via NASA Earth Imagery API · ~55 km across · ${lat.toFixed(2)}, ${lng.toFixed(2)}</div></div>` : '';
   document.getElementById('dBody').innerHTML='<div class="spin">Fetching live data…</div>';
   drawer.classList.add('open');
   try{
@@ -375,7 +410,7 @@ async function openDetail(crisis,country,informIdx,eii){
 }
 
 function renderDetail(d){
-  const k=d.keys||{}; let h='';
+  const k=d.keys||{}; let h=_nasaImgHtml;
   // ---- setup card if keys missing ----
   if(!k.tavily || !k.acled){
     h+=`<div class="setup"><b>Connect data sources to go live.</b><br>Add a <code>.env</code> file in the project folder:`;

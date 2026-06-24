@@ -60,7 +60,7 @@ def load_env():
                 continue
             k, v = line.split("=", 1)
             env[k.strip()] = v.strip().strip('"').strip("'")
-    for k in ("TAVILY_API_KEY", "ACLED_API_KEY", "ACLED_EMAIL"):
+    for k in ("TAVILY_API_KEY", "ACLED_API_KEY", "ACLED_EMAIL", "NASA_API_KEY"):
         if os.environ.get(k):
             env[k] = os.environ[k]
     return env
@@ -140,7 +140,55 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/detail"):
             return self.api_detail()
+        if self.path.startswith("/api/earth-image"):
+            return self.api_earth_image()
         return super().do_GET()
+
+    def api_earth_image(self):
+        """Proxy NASA's keyed Earth Imagery API -> a Landsat snapshot for one
+        location. Key stays server-side; image bytes are disk-cached (the NASA
+        endpoint is slow), and any failure returns JSON so the client hides it."""
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        try:
+            lat = float((q.get("lat") or [""])[0])
+            lon = float((q.get("lon") or [""])[0])
+        except ValueError:
+            return self.send_json({"error": "bad_coords"}, 400)
+        dim = (q.get("dim") or ["0.5"])[0]
+        key = load_env().get("NASA_API_KEY")
+        if not key:
+            return self.send_json({"error": "no_nasa_key"}, 404)
+        cpath = os.path.join(CACHE_DIR, "img_" + hashlib.sha1(
+            f"earth|{lat}|{lon}|{dim}".encode()).hexdigest()[:16] + ".png")
+        data = None
+        if os.path.exists(cpath) and time.time() - os.path.getmtime(cpath) < 7 * 86400:
+            try:
+                data = open(cpath, "rb").read()
+            except Exception:
+                data = None
+        if data is None:
+            url = "https://api.nasa.gov/planetary/earth/imagery?" + urllib.parse.urlencode(
+                {"lon": lon, "lat": lat, "dim": dim, "api_key": key})
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "EII/1.0"})
+                with urllib.request.urlopen(req, timeout=35) as r:
+                    ctype = r.headers.get("Content-Type", "")
+                    data = r.read()
+                if not ctype.startswith("image"):
+                    return self.send_json(
+                        {"error": "nasa_no_image",
+                         "detail": data[:200].decode("utf-8", "ignore")}, 502)
+                os.makedirs(CACHE_DIR, exist_ok=True)
+                open(cpath, "wb").write(data)
+            except Exception as e:
+                return self.send_json({"error": "nasa_unreachable", "detail": str(e)}, 502)
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Cache-Control", "public, max-age=604800")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def api_detail(self):
         q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
