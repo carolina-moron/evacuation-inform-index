@@ -80,6 +80,13 @@
 .cerai-disc{font-size:10.5px;color:#8a97a4;line-height:1.45;margin-top:8px;border-top:1px solid #e2e9f0;padding-top:7px}
 .cerai-mini{font-size:11px;color:var(--navy2);margin:3px 0 2px}
 .cerai-mini .cband{background:var(--navy);color:#fff;border-radius:8px;padding:0 6px;font-size:10px}
+.cg-range{position:absolute;top:0;bottom:0;background:rgba(18,32,47,.16);border-left:1px solid rgba(18,32,47,.35);border-right:1px solid rgba(18,32,47,.35)}
+.cerai-vuln{margin:10px 0 4px;border-top:1px solid #e2e9f0;padding-top:9px}
+.vchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.vchip{font-size:11.5px;padding:4px 9px;border-radius:14px;border:1px solid #cfd9e6;background:#fff;color:var(--muted);cursor:pointer;transition:all .12s}
+.vchip:hover{border-color:var(--navy2)}
+.vchip.on.up{background:#fdecea;border-color:#e6a49b;color:#a5342a;font-weight:600}
+.vchip.on.down{background:#eaf4ec;border-color:#a7cdb0;color:#2f6b3c;font-weight:600}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:12px 0}
   .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
   .card h4{margin:0 0 4px;color:var(--navy);font-size:14px}
@@ -225,7 +232,11 @@
       <tr><td><b>Feasibility</b> (can people move?)</td><td>Can civilians realistically move?</td><td>INFORM <i>Complexity</i> (RSE), inverted → 0–100%, reduced by live <b>Open-Meteo</b> route weather</td></tr>
       <tr><td><b>Protection gap flag</b></td><td>Where is escalation needed?</td><td>High endangerment (≥75%) + low feasibility (≤40%) → flags need for <b>political</b>, not operational, escalation</td></tr>
     </table>
-    <div class="note-box"><b>Honest scope.</b> This is a faithful proxy of CERAI's <i>architecture</i> built from data the index already carries (INFORM + ACLED + Open-Meteo) — <b>not</b> CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. The vulnerability multiplier (0.7×–1.3×) is not applied (no demographic inputs). CERAI scores map to the INFORM 0–10 scale by ÷10, so the two frameworks are directly comparable.</div>
+    <table class="t">
+      <tr><th>CERAI dimension</th><th>What it answers</th><th>How we compute it here</th></tr>
+      <tr><td><b>Vulnerability profile</b> (Dimension 3)</td><td>Who is exposed?</td><td>Interactive demographic toggles set a 0.7×–1.3× multiplier that amplifies endangerment and reduces feasibility; the 0.7×–1.3× span is shown as the endangerment <b>range across the population</b></td></tr>
+    </table>
+    <div class="note-box"><b>Honest scope.</b> This is a faithful proxy of CERAI's <i>architecture</i> built from data the index already carries (INFORM + ACLED + Open-Meteo) plus the interactive D3 profile — <b>not</b> CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. CERAI scores map to the INFORM 0–10 scale by ÷10, so the two frameworks are directly comparable.</div>
 
     <h3>Three-layer architecture</h3>
     <p class="click-hint">▸ Click a layer to see its variables &amp; proposed weights.</p>
@@ -566,31 +577,70 @@ function ceraiScores(d, detail, weather){
   const gap = endanger>=75 && feas<=40;          // high danger + low feasibility
   return {endanger,feas,band,traj,trajTxt,wxPenalty,gap};
 }
-function ceraiGauge(label,sub,pct,kind,threshold){
+function ceraiGauge(label,sub,pct,kind,threshold,range){
+  const band = range ? `<div class="cg-range" style="left:${clamp(range.lo,0,100)}%;width:${clamp(range.hi-range.lo,0,100)}%" title="Range across population vulnerability (0.7×–1.3×)"></div>` : '';
   return `<div class="cg">
     <div class="cg-h"><span>${label}</span><span class="cg-pct">${Math.round(pct)}%</span></div>
     <div class="cg-sub">${sub}</div>
-    <div class="cg-bar ${kind}"><div class="cg-mark" style="left:${clamp(pct,0,100)}%"></div>
+    <div class="cg-bar ${kind}">${band}<div class="cg-mark" style="left:${clamp(pct,0,100)}%"></div>
       ${threshold!=null?`<div class="cg-th" style="left:${threshold}%" title="${threshold}% IHL Obligation Threshold — GC IV Art. 49"></div>`:''}
     </div></div>`;
 }
+/* CERAI Dimension 3 — Vulnerability Profile. A demographic profile the user sets;
+   each factor shifts a multiplier by ±0.06 (capped 0.7–1.3) that AMPLIFIES
+   endangerment and REDUCES feasibility (two causally distinct pathways). The
+   0.7×–1.3× span is also shown as the range across the population. */
+const VULN_FACTORS=[
+  {k:'children',   label:'Young children (<12)',            dir:+1},
+  {k:'elderly',    label:'Elderly (65+)',                   dir:+1},
+  {k:'medical',    label:'Disabled / medically dependent',  dir:+1},
+  {k:'gbv',        label:'Gendered (GBV) risk',             dir:+1},
+  {k:'experience', label:'Prior evacuation experience',     dir:-1},
+  {k:'finance',    label:'Financial resources',             dir:-1},
+];
+const vulnState=new Set();
+function vulnMultiplier(){
+  let m=1.0; VULN_FACTORS.forEach(f=>{ if(vulnState.has(f.k)) m+=0.06*f.dir; });
+  return clamp(m,0.7,1.3);
+}
+function toggleVuln(k){ vulnState.has(k)?vulnState.delete(k):vulnState.add(k); renderCerai(); }
+let _ceraiCtx=null;
+function renderCerai(){
+  const host=document.getElementById('ceraiHost');
+  if(host && _ceraiCtx) host.innerHTML=ceraiBlockHTML(_ceraiCtx.d,_ceraiCtx.detail,_ceraiCtx.weather);
+}
 function ceraiBlockHTML(d, detail, weather){
   const s=ceraiScores(d,detail,weather);
-  const gap = s.gap ? `<div class="cerai-gap">⚠️ <b>Protection gap.</b> Endangerment is above the 75% IHL threshold while feasibility is low. Under GC IV Art. 49 the obligation to protect civilians does not lapse when evacuation is hard — it signals a need for <b>political escalation</b>, not an operational-only response.</div>` : '';
+  const m=vulnMultiplier();
+  const endanger=clamp(s.endanger*m,0,100);            // D3 amplifies endangerment
+  const eLo=clamp(s.endanger*0.7,0,100), eHi=clamp(s.endanger*1.3,0,100); // population range
+  const feas=clamp(s.feas*(2-m),0,100);                // D3 reduces feasibility
+  const band = endanger>=90?'Critical':endanger>=75?'Extreme':endanger>=55?'Severe':endanger>=35?'Elevated':'Manageable';
+  const gap = endanger>=75 && feas<=40;
+  const gapHtml = gap ? `<div class="cerai-gap">⚠️ <b>Protection gap.</b> Endangerment is above the 75% IHL threshold while feasibility is low. Under GC IV Art. 49 the obligation to protect civilians does not lapse when evacuation is hard — it signals a need for <b>political escalation</b>, not an operational-only response.</div>` : '';
   const traj = `Trajectory: <b>${s.trajTxt}</b>`+(s.traj!=null?` <span class="cg-sub" style="display:inline">(ACLED fatalities, recent 3-mo vs prior 3-mo ${s.traj>=0?'+':''}${Math.round(s.traj*100)}%)</span>`:'');
   const wx = weather
     ? `Route weather (live · Open-Meteo): ${wmoDesc(weather.code)}, ${Math.round(weather.temp)}°C, wind ${Math.round(weather.wind)} km/h`
       +(weather.precip>0?`, precip ${weather.precip} mm`:'')+` · daylight ${weather.daylight}`
       +(s.wxPenalty>0?` — −${s.wxPenalty} pts feasibility`:'')
     : `Route weather: unavailable`;
+  const chips=VULN_FACTORS.map(f=>{
+    const on=vulnState.has(f.k);
+    return `<button type="button" class="vchip ${on?'on':''} ${f.dir>0?'up':'down'}" aria-pressed="${on}" onclick="toggleVuln('${f.k}')">${f.dir>0?'▲':'▼'} ${f.label}</button>`;
+  }).join('');
+  const vuln=`<div class="cerai-vuln">
+    <div class="cerai-note"><b>Vulnerability profile — Dimension 3</b> · multiplier <b>×${m.toFixed(2)}</b> &nbsp;<span class="cg-sub" style="display:inline">▲ raises endangerment / lowers feasibility · ▼ the reverse</span></div>
+    <div class="vchips">${chips}</div>
+  </div>`;
   return `<div class="cerai">
     <div class="cerai-hd">🧭 <b>CERAI lens</b> — endangerment and feasibility, kept separate (never one score)</div>
-    ${ceraiGauge('Endangerment — risk of staying', `INFORM Conditions + ACLED · band: <b>${s.band}</b>`, s.endanger, 'danger', 75)}
+    ${ceraiGauge('Endangerment — risk of staying', `INFORM Conditions + ACLED · band: <b>${band}</b> · range across population <b>${Math.round(eLo)}–${Math.round(eHi)}%</b>`, endanger, 'danger', 75, {lo:eLo,hi:eHi})}
     <div class="cerai-note">${traj}</div>
-    ${ceraiGauge('Feasibility — can people move', 'INFORM Complexity + live weather (geom. of route/exit/destination)', s.feas, 'feas', null)}
+    ${ceraiGauge('Feasibility — can people move', 'INFORM Complexity + live weather (geom. of route/exit/destination)', feas, 'feas', null)}
     <div class="cerai-note">${wx}</div>
-    ${gap}
-    <div class="cerai-disc">Proxy of <a href="${CERAI_URL}" target="_blank" rel="noopener">CERAI v3</a>'s architecture, built from INFORM + ACLED + Open-Meteo — not CERAI's full 22-variable IHL engine. Vulnerability multiplier (0.7–1.3×) not applied here (no demographic inputs). CERAI scores map to the INFORM 0–10 scale by ÷10.</div>
+    ${vuln}
+    ${gapHtml}
+    <div class="cerai-disc">Proxy of <a href="${CERAI_URL}" target="_blank" rel="noopener">CERAI v3</a>'s architecture, built from INFORM + ACLED + Open-Meteo + the D3 profile above — not CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. CERAI scores map to the INFORM 0–10 scale by ÷10.</div>
   </div>`;
 }
 
@@ -711,7 +761,9 @@ async function loadLive(idx){
   try{
     const detail=await fetchDetail(d.crisis,d.name,days);
     const weather=await fetchWeather(d.lat,d.lng);
-    body.innerHTML=ceraiBlockHTML(d,detail,weather)+buildDetailHTML(detail,nasa);
+    _ceraiCtx={d,detail,weather};
+    body.innerHTML='<div id="ceraiHost"></div>'+buildDetailHTML(detail,nasa);
+    renderCerai();
   }catch(err){ body.innerHTML=backendDownHTML(err); }
   refreshUsage();
 }
