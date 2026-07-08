@@ -62,6 +62,7 @@
 .flash{animation:flashHi 1.6s ease-out}
 @keyframes flashHi{0%,20%{background:#fff3cd;border-radius:6px}100%{background:transparent}}
 .snapnote{background:#eef3fa;border:1px solid #cfe0f2;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.5;color:var(--navy);margin:0 0 12px}
+.sec-sep{border:0;border-top:2px solid var(--line);margin:34px 0 6px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:12px 0}
   .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
   .card h4{margin:0 0 4px;color:var(--navy);font-size:14px}
@@ -144,8 +145,7 @@
 <nav>
   <button data-tab="map" class="active">🗺 Map</button>
   <button data-tab="live">🔴 Live &amp; Conflict</button>
-  <button data-tab="method">📐 Methodology</button>
-  <button data-tab="vars">⚖ Variables &amp; Weights</button>
+  <button data-tab="method">📐 Methodology &amp; Variables</button>
   <button data-tab="data">🗄 Data Sources</button>
   <button data-tab="refs">📚 References</button>
 </nav>
@@ -223,13 +223,11 @@
 
     <h3>Constraint layers (not scored)</h3>
     <p><b>Financial feasibility filter</b> — a second-stage check on whether the recommended action is affordable (transport, accommodation, asset-liquidation loss, income disruption). <b>Legal / rights (UDHR Art. 13)</b> — flags exit-visa requirements, travel bans or closure orders that restrict self-evacuation.</p>
-  </div>
-</section>
 
-<!-- ===================== VARIABLES ===================== -->
-<section id="vars-panel" class="panel">
-  <div class="doc">
-    <h2>Variables &amp; Proposed Weights</h2>
+    <hr class="sec-sep">
+
+    <!-- ===================== VARIABLES (merged into Methodology) ===================== -->
+    <h2 id="vars-top">Variables &amp; Proposed Weights</h2>
     <p class="lead">Preliminary weights synthesised from INFORM, ACLED and FSI logic — to be validated by AHP expert surveys.</p>
 
     <h3 id="var-layer1">Layer 1 — Objective Risk Score · 50%</h3>
@@ -610,7 +608,7 @@ function activateTab(name){
 }
 // Methodology layer row -> jump to the Variables tab, scrolled to that layer.
 function showVars(layer){
-  activateTab('vars');
+  activateTab('method');
   const el=document.getElementById('var-'+layer);
   if(el){
     el.scrollIntoView({behavior:'smooth',block:'start'});
