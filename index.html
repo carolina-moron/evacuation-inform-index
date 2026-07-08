@@ -63,6 +63,23 @@
 @keyframes flashHi{0%,20%{background:#fff3cd;border-radius:6px}100%{background:transparent}}
 .snapnote{background:#eef3fa;border:1px solid #cfe0f2;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.5;color:var(--navy);margin:0 0 12px}
 .sec-sep{border:0;border-top:2px solid var(--line);margin:34px 0 6px}
+/* ---- CERAI lens ---- */
+.cerai{border:1px solid #cfd9e6;background:#f7fafd;border-radius:10px;padding:12px 14px;margin:0 0 14px}
+.cerai-hd{font-size:13px;color:var(--navy);margin-bottom:10px}
+.cg{margin:9px 0}
+.cg-h{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--ink)}
+.cg-pct{font-size:15px;font-weight:800;color:var(--navy)}
+.cg-sub{font-size:11px;color:var(--muted);margin:1px 0 4px;line-height:1.35}
+.cg-bar{position:relative;height:14px;border-radius:7px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.cg-bar.danger{background:linear-gradient(90deg,#2c7fb8 0%,#7fb069 30%,#e0b000 58%,#e08214 78%,#d7301f 100%)}
+.cg-bar.feas{background:linear-gradient(90deg,#d7301f 0%,#e08214 30%,#e0b000 50%,#7fb069 78%,#2c7fb8 100%)}
+.cg-mark{position:absolute;top:-3px;bottom:-3px;width:3px;background:#12202f;transform:translateX(-1.5px);box-shadow:0 0 0 1.5px #fff;border-radius:2px}
+.cg-th{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed #12202f;opacity:.65}
+.cerai-note{font-size:11.5px;color:var(--muted);margin:2px 0 8px;line-height:1.4}
+.cerai-gap{background:#fdecea;border:1px solid #f5b7b1;border-radius:8px;padding:9px 11px;font-size:12px;line-height:1.5;color:#7b241c;margin:6px 0}
+.cerai-disc{font-size:10.5px;color:#8a97a4;line-height:1.45;margin-top:8px;border-top:1px solid #e2e9f0;padding-top:7px}
+.cerai-mini{font-size:11px;color:var(--navy2);margin:3px 0 2px}
+.cerai-mini .cband{background:var(--navy);color:#fff;border-radius:8px;padding:0 6px;font-size:10px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:12px 0}
   .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
   .card h4{margin:0 0 4px;color:var(--navy);font-size:14px}
@@ -199,6 +216,16 @@
     <div class="formula">EII = RSE / RSS<small>EII &gt; 1.0 → evacuation is riskier than staying &nbsp;|&nbsp; EII &lt; 1.0 → staying is riskier than evacuating</small></div>
     <div class="note-box"><b>Live data grounding.</b> The map is populated with the real <b>INFORM Severity Index, April 2026</b> (ACAPS / EU JRC, 104 active crises, via HDX). Each crisis's <i>Conditions of people affected</i> sub-score drives <b>RSS</b> (how severe it is to remain) and its <i>Complexity</i> sub-score — access constraints, society &amp; safety, operating environment — drives <b>RSE</b> (how hard/dangerous it is to move). Both are rescaled from INFORM's 1–10 to the 1–5 EII scale. Layers 2–3 (route availability, personal modifiers) below are the design roadmap; the current build uses INFORM as the live backbone.</div>
     <div class="note-box"><b>Design note.</b> Pure ratios destabilise as the denominator nears zero. A floor of <b>RSS = 0.5</b> (on a 5-point scale) is applied, and the EII is always shown alongside both component scores — never as the sole output.</div>
+
+    <h3>CERAI lens — endangerment vs feasibility</h3>
+    <p>The <a href="https://docs.google.com/document/d/18Gke5uB-3kc39c9kBreoJ1Mu3ViyjxTX/edit" target="_blank" rel="noopener">CERAI v3</a> framework makes one architectural argument: <b>never collapse danger and feasibility into a single score</b>. Under IHL the obligation to protect civilians flows from <i>danger</i> (GC IV Art. 49), not from operational feasibility — low feasibility does not extinguish the obligation, it intensifies the urgency of political engagement (Mariupol 2022 is the proof-of-concept). This index renders that split live, per crisis, on the <b>🔴 Live &amp; Conflict</b> tab:</p>
+    <table class="t">
+      <tr><th>CERAI dimension</th><th>What it answers</th><th>How we compute it here</th></tr>
+      <tr><td><b>Endangerment</b> (Threat Environment)</td><td>How dangerous is it to stay?</td><td>INFORM <i>Conditions</i> (RSS) → 0–100%, with the <b>75% IHL Obligation Threshold</b> marked; trajectory from live ACLED fatalities</td></tr>
+      <tr><td><b>Feasibility</b> (can people move?)</td><td>Can civilians realistically move?</td><td>INFORM <i>Complexity</i> (RSE), inverted → 0–100%, reduced by live <b>Open-Meteo</b> route weather</td></tr>
+      <tr><td><b>Protection gap flag</b></td><td>Where is escalation needed?</td><td>High endangerment (≥75%) + low feasibility (≤40%) → flags need for <b>political</b>, not operational, escalation</td></tr>
+    </table>
+    <div class="note-box"><b>Honest scope.</b> This is a faithful proxy of CERAI's <i>architecture</i> built from data the index already carries (INFORM + ACLED + Open-Meteo) — <b>not</b> CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. The vulnerability multiplier (0.7×–1.3×) is not applied (no demographic inputs). CERAI scores map to the INFORM 0–10 scale by ÷10, so the two frameworks are directly comparable.</div>
 
     <h3>Three-layer architecture</h3>
     <p class="click-hint">▸ Click a layer to see its variables &amp; proposed weights.</p>
@@ -384,8 +411,10 @@ function draw(metric){
     const verdict = e>1.05 ? '<span class="pill" style="background:#d7301f">Staying favored</span>'
                   : e<0.95 ? '<span class="pill" style="background:#2c7fb8">Evacuation favored</span>'
                   : '<span class="pill" style="background:#888">Near parity</span>';
+    const cs=ceraiScores(d,null,null);
     m.bindPopup(`<div class="lp"><h3>${d.crisis}</h3>
       <div class="edi">EII = ${e.toFixed(2)} &nbsp;${verdict}</div>
+      <div class="cerai-mini">CERAI · Endangerment <b>${Math.round(cs.endanger)}%</b> <span class="cband">${cs.band}</span> &nbsp;·&nbsp; Feasibility <b>${Math.round(cs.feas)}%</b></div>
       <table>
         <tr><td>Risk of Evacuating (RSE) &mdash; Complexity</td><td>${d.rse.toFixed(1)}</td></tr>
         <tr><td>Risk of Staying (RSS) &mdash; Conditions</td><td>${d.rss.toFixed(1)}</td></tr>
@@ -419,6 +448,7 @@ draw('edi');
 const SOURCES=[
   ["ACAPS / INFORM Severity","Global crisis severity, humanitarian conditions","Monthly","Free","https://acaps.org"],
   ["ACLED","Conflict events, fatalities, actors, location","Weekly","Free tier","https://acleddata.com"],
+  ["Open-Meteo / ECMWF","Live weather &amp; daylight on the route — feeds CERAI feasibility (no key)","Real-time","Free · live","https://open-meteo.com"],
   ["Fragile States Index","12-indicator state fragility, 178 countries","Annual","Free","https://fragilestatesindex.org"],
   ["IOM RICD","Climate displacement risk (macro + micro)","Project","Free","https://environmentalmigration.iom.int"],
   ["IDMC Risk Model","Displacement probability from natural hazards","Annual","Free","https://www.internal-displacement.org"],
@@ -476,6 +506,92 @@ async function fetchDetail(crisis,country,days){
     if(!r2.ok) throw e;                      // no backend AND no snapshot
     const j=await r2.json(); j.snapshot=true; return j;
   }
+}
+
+/* ============================ CERAI lens ============================
+   CERAI v3's core claim is architectural: never collapse danger and
+   feasibility into one number. We render that split from data we already
+   have — Endangerment from INFORM Conditions (+ ACLED trajectory),
+   Feasibility from INFORM Complexity (+ live Open-Meteo weather) — with the
+   75% IHL Obligation Threshold (GC IV Art. 49) and the protection-gap flag.
+   Honest proxy of CERAI's architecture, NOT its full 22-variable IHL engine. */
+const CERAI_URL='https://docs.google.com/document/d/18Gke5uB-3kc39c9kBreoJ1Mu3ViyjxTX/edit';
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function wmoDesc(c){
+  if(c==null) return 'unknown';
+  if(c===0) return 'clear'; if(c<=3) return 'partly cloudy'; if(c<=48) return 'fog';
+  if(c<=57) return 'drizzle'; if(c<=67) return 'rain'; if(c<=77) return 'snow';
+  if(c<=82) return 'rain showers'; if(c<=86) return 'snow showers';
+  if(c>=95) return 'thunderstorm'; return 'mixed';
+}
+// Live weather straight from Open-Meteo (no key, CORS-enabled) — works on Pages.
+async function fetchWeather(lat,lng){
+  if(lat==null||lng==null) return null;
+  try{
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}`
+      +`&current=temperature_2m,precipitation,wind_speed_10m,weather_code&daily=sunrise,sunset&timezone=auto&forecast_days=1`;
+    const r=await fetch(u); if(!r.ok) return null;
+    const j=await r.json(), c=j.current||{};
+    let daylight='—';
+    try{ const sr=new Date(j.daily.sunrise[0]), ss=new Date(j.daily.sunset[0]);
+         daylight=((ss-sr)/3.6e6).toFixed(1)+'h'; }catch(e){}
+    return {temp:c.temperature_2m, precip:c.precipitation, wind:c.wind_speed_10m,
+            code:c.weather_code, daylight};
+  }catch(e){ return null; }
+}
+// Compute the two independent CERAI dimensions from a LOCS entry (+ optional live data).
+function ceraiScores(d, detail, weather){
+  // Endangerment (risk of STAYING) — INFORM Conditions (rss, 1–5) -> 0–100%.
+  const endanger=clamp((d.rss-1)/4*100,0,100);
+  const band = endanger>=90?'Critical':endanger>=75?'Extreme':endanger>=55?'Severe':endanger>=35?'Elevated':'Manageable';
+  // Trajectory from ACLED fatalities: recent 3 months vs the prior 3.
+  const months=(detail&&detail.acled&&detail.acled.months)||[];
+  let traj=null, trajTxt='insufficient ACLED data';
+  if(months.length>=6){
+    const recent=months.slice(-3).reduce((s,m)=>s+(m.fatalities||0),0);
+    const prior=months.slice(-6,-3).reduce((s,m)=>s+(m.fatalities||0),0);
+    if(recent||prior){
+      traj = prior===0 ? (recent>0?1:0) : (recent-prior)/prior;
+      trajTxt = traj>0.15?'escalating':traj<-0.15?'de-escalating':'stable';
+    }
+  }
+  // Feasibility (can people MOVE) — INFORM Complexity (rse, 1–5), inverted -> 0–100%.
+  let feas=clamp((1-(d.rse-1)/4)*100,0,100), wxPenalty=0;
+  if(weather){                                   // live weather reduces route feasibility
+    const {precip=0, wind=0, code} = weather;
+    if(code>=95) wxPenalty=15; else if(code>=71) wxPenalty=10; else if(precip>2) wxPenalty=7;
+    if(wind>40) wxPenalty=Math.max(wxPenalty,8);
+    feas=clamp(feas-wxPenalty,0,100);
+  }
+  const gap = endanger>=75 && feas<=40;          // high danger + low feasibility
+  return {endanger,feas,band,traj,trajTxt,wxPenalty,gap};
+}
+function ceraiGauge(label,sub,pct,kind,threshold){
+  return `<div class="cg">
+    <div class="cg-h"><span>${label}</span><span class="cg-pct">${Math.round(pct)}%</span></div>
+    <div class="cg-sub">${sub}</div>
+    <div class="cg-bar ${kind}"><div class="cg-mark" style="left:${clamp(pct,0,100)}%"></div>
+      ${threshold!=null?`<div class="cg-th" style="left:${threshold}%" title="${threshold}% IHL Obligation Threshold — GC IV Art. 49"></div>`:''}
+    </div></div>`;
+}
+function ceraiBlockHTML(d, detail, weather){
+  const s=ceraiScores(d,detail,weather);
+  const gap = s.gap ? `<div class="cerai-gap">⚠️ <b>Protection gap.</b> Endangerment is above the 75% IHL threshold while feasibility is low. Under GC IV Art. 49 the obligation to protect civilians does not lapse when evacuation is hard — it signals a need for <b>political escalation</b>, not an operational-only response.</div>` : '';
+  const traj = `Trajectory: <b>${s.trajTxt}</b>`+(s.traj!=null?` <span class="cg-sub" style="display:inline">(ACLED fatalities, recent 3-mo vs prior 3-mo ${s.traj>=0?'+':''}${Math.round(s.traj*100)}%)</span>`:'');
+  const wx = weather
+    ? `Route weather (live · Open-Meteo): ${wmoDesc(weather.code)}, ${Math.round(weather.temp)}°C, wind ${Math.round(weather.wind)} km/h`
+      +(weather.precip>0?`, precip ${weather.precip} mm`:'')+` · daylight ${weather.daylight}`
+      +(s.wxPenalty>0?` — −${s.wxPenalty} pts feasibility`:'')
+    : `Route weather: unavailable`;
+  return `<div class="cerai">
+    <div class="cerai-hd">🧭 <b>CERAI lens</b> — endangerment and feasibility, kept separate (never one score)</div>
+    ${ceraiGauge('Endangerment — risk of staying', `INFORM Conditions + ACLED · band: <b>${s.band}</b>`, s.endanger, 'danger', 75)}
+    <div class="cerai-note">${traj}</div>
+    ${ceraiGauge('Feasibility — can people move', 'INFORM Complexity + live weather (geom. of route/exit/destination)', s.feas, 'feas', null)}
+    <div class="cerai-note">${wx}</div>
+    ${gap}
+    <div class="cerai-disc">Proxy of <a href="${CERAI_URL}" target="_blank" rel="noopener">CERAI v3</a>'s architecture, built from INFORM + ACLED + Open-Meteo — not CERAI's full 22-variable IHL engine. Vulnerability multiplier (0.7–1.3×) not applied here (no demographic inputs). CERAI scores map to the INFORM 0–10 scale by ÷10.</div>
+  </div>`;
 }
 
 async function openDetail(crisis,country,informIdx,eii,lat,lng){
@@ -593,7 +709,9 @@ async function loadLive(idx){
   _liveLoaded=idx;
   const nasa=nasaImgHTML(d.crisis,d.lat,d.lng);
   try{
-    body.innerHTML=buildDetailHTML(await fetchDetail(d.crisis,d.name,days),nasa);
+    const detail=await fetchDetail(d.crisis,d.name,days);
+    const weather=await fetchWeather(d.lat,d.lng);
+    body.innerHTML=ceraiBlockHTML(d,detail,weather)+buildDetailHTML(detail,nasa);
   }catch(err){ body.innerHTML=backendDownHTML(err); }
   refreshUsage();
 }
