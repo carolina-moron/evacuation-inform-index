@@ -26,9 +26,32 @@ python server.py
 
 Then open `index.html` (or the URL the server prints).
 
+## Hosted site (static snapshot)
+
+GitHub Pages serves static files only, so it can't run `server.py`. To make the
+hosted site behave like the live app, the backend responses are **baked into
+static JSON** and committed under `snapshot/`.
+
+The frontend tries the live `/api/detail` endpoint first (works when you run
+`server.py` locally) and falls back to `snapshot/detail/<slug>.json` when no
+backend is present — so clicking a crisis on GitHub Pages still shows the Tavily
+news and ACLED timeline, with a "📸 Snapshot" note indicating the data is frozen
+at capture time.
+
+To refresh the snapshot (re-runs the real Tavily + ACLED calls, needs a
+populated `.env`):
+
+```bash
+python3 snapshot.py            # fill in missing crises (resumable)
+python3 snapshot.py --force    # regenerate all 104 crises
+git add snapshot && git commit -m "Refresh snapshot" && git push
+```
+
 ## Files
 
 - `index.html` — the dashboard UI
 - `data.js` — index data and weights
 - `server.py` — live backend (news + ACLED timeline, cached)
+- `snapshot.py` — bakes the static snapshot the hosted site falls back to
+- `snapshot/` — pre-generated per-crisis JSON served on GitHub Pages
 - `acled-api/` — ACLED helper script

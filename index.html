@@ -53,6 +53,15 @@
   table.t td{padding:8px 11px;border-top:1px solid var(--line);vertical-align:top;line-height:1.45}
   table.t tr:nth-child(even) td{background:#fafbfc}
   .w{font-weight:700;color:var(--navy2);white-space:nowrap}
+.click-hint{font-size:12.5px;color:var(--navy2);font-weight:600;margin:8px 0 2px}
+.clickrow{cursor:pointer;transition:background .12s}
+.clickrow:hover,.clickrow:focus{background:#eef3fa;outline:none}
+.clickrow:focus-visible{box-shadow:inset 0 0 0 2px var(--navy2)}
+.rowgo{font-size:11px;font-weight:600;color:var(--navy2);opacity:0;transition:opacity .12s;white-space:nowrap}
+.clickrow:hover .rowgo,.clickrow:focus .rowgo{opacity:1}
+.flash{animation:flashHi 1.6s ease-out}
+@keyframes flashHi{0%,20%{background:#fff3cd;border-radius:6px}100%{background:transparent}}
+.snapnote{background:#eef3fa;border:1px solid #cfe0f2;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.5;color:var(--navy);margin:0 0 12px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:12px 0}
   .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
   .card h4{margin:0 0 4px;color:var(--navy);font-size:14px}
@@ -192,11 +201,12 @@
     <div class="note-box"><b>Design note.</b> Pure ratios destabilise as the denominator nears zero. A floor of <b>RSS = 0.5</b> (on a 5-point scale) is applied, and the EII is always shown alongside both component scores — never as the sole output.</div>
 
     <h3>Three-layer architecture</h3>
+    <p class="click-hint">▸ Click a layer to see its variables &amp; proposed weights.</p>
     <table class="t">
       <tr><th>Layer</th><th>Function</th><th>Precedent</th></tr>
-      <tr><td><b>Layer 1 — Objective Risk Score (ORS)</b><br><span class="w">50%</span></td><td>Universal factors, identical for everyone in the geography (hostilities, conflict risk, natural-hazard life risk)</td><td>INFORM Severity, ACLED, GCRI</td></tr>
-      <tr><td><b>Layer 2 — Infrastructure &amp; Access (IAS)</b><br><span class="w">35%</span></td><td>Availability of evacuation routes, resources &amp; connectivity</td><td>ACAPS Humanitarian Access, IDMC</td></tr>
-      <tr><td><b>Layer 3 — Personal Vulnerability Modifier (PVM)</b><br><span class="w">15%</span></td><td>Demographic / household factors applied as a multiplicative modifier (0.7×–1.3×)</td><td>CDC SVI, IOM RICD micro-level</td></tr>
+      <tr class="clickrow" role="button" tabindex="0" onclick="showVars('layer1')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showVars('layer1')}"><td><b>Layer 1 — Objective Risk Score (ORS)</b> <span class="rowgo">variables →</span><br><span class="w">50%</span></td><td>Universal factors, identical for everyone in the geography (hostilities, conflict risk, natural-hazard life risk)</td><td>INFORM Severity, ACLED, GCRI</td></tr>
+      <tr class="clickrow" role="button" tabindex="0" onclick="showVars('layer2')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showVars('layer2')}"><td><b>Layer 2 — Infrastructure &amp; Access (IAS)</b> <span class="rowgo">variables →</span><br><span class="w">35%</span></td><td>Availability of evacuation routes, resources &amp; connectivity</td><td>ACAPS Humanitarian Access, IDMC</td></tr>
+      <tr class="clickrow" role="button" tabindex="0" onclick="showVars('layer3')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showVars('layer3')}"><td><b>Layer 3 — Personal Vulnerability Modifier (PVM)</b> <span class="rowgo">variables →</span><br><span class="w">15%</span></td><td>Demographic / household factors applied as a multiplicative modifier (0.7×–1.3×)</td><td>CDC SVI, IOM RICD micro-level</td></tr>
     </table>
 
     <h3>Aggregation — weighted geometric mean</h3>
@@ -222,7 +232,7 @@
     <h2>Variables &amp; Proposed Weights</h2>
     <p class="lead">Preliminary weights synthesised from INFORM, ACLED and FSI logic — to be validated by AHP expert surveys.</p>
 
-    <h3>Layer 1 — Objective Risk Score · 50%</h3>
+    <h3 id="var-layer1">Layer 1 — Objective Risk Score · 50%</h3>
     <table class="t">
       <tr><th>Variable</th><th>Data source</th><th>Weight</th><th>Rationale</th></tr>
       <tr><td>Active hostilities</td><td>ACLED: fatalities, attack types, proximity</td><td class="w">20%</td><td>Immediate life threat; fastest-changing → heaviest weight</td></tr>
@@ -230,7 +240,7 @@
       <tr><td>Life risk (non-conflict)</td><td>IDMC, FEWS NET — flood, quake, fire</td><td class="w">15%</td><td>Natural-hazard exposure alongside conflict</td></tr>
     </table>
 
-    <h3>Layer 2 — Infrastructure &amp; Access · 35%</h3>
+    <h3 id="var-layer2">Layer 2 — Infrastructure &amp; Access · 35%</h3>
     <table class="t">
       <tr><th>Variable</th><th>Data source</th><th>Weight</th><th>Rationale</th></tr>
       <tr><td>Evacuation route availability</td><td>Flight seats, road/border status, satellite imagery</td><td class="w">12%</td><td>No route = evacuation impossible</td></tr>
@@ -239,7 +249,7 @@
       <tr><td>Weather</td><td>NOAA, Copernicus</td><td class="w">5%</td><td>Modifier on route viability &amp; shelter</td></tr>
     </table>
 
-    <h3>Layer 3 — Personal Vulnerability Modifier · 15% (multiplicative 0.7×–1.3×)</h3>
+    <h3 id="var-layer3">Layer 3 — Personal Vulnerability Modifier · 15% (multiplicative 0.7×–1.3×)</h3>
     <table class="t">
       <tr><th>Variable</th><th>Operationalisation</th><th>Direction of effect</th></tr>
       <tr><td>Young children (&lt;12)</td><td>CDC SVI "age ≤17"; self-report</td><td>↑ RSE (harder to move) &amp; ↑ RSS (more vulnerable)</td></tr>
@@ -451,6 +461,25 @@ function backendDownHTML(err){
   return `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;
 }
 
+// Deterministic snapshot key — MUST match detail_slug() in snapshot.py.
+function detailSlug(crisis,country){
+  return (crisis+'__'+country).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+// Try the live Python backend first (local dev); on GitHub Pages there is no
+// backend, so fall back to the baked static snapshot so the app still works.
+async function fetchDetail(crisis,country,days){
+  const qs=`crisis=${encodeURIComponent(crisis)}&country=${encodeURIComponent(country)}`+(days?`&days=${days}`:'');
+  try{
+    const r=await fetch(`/api/detail?${qs}`);
+    if(r.ok) return await r.json();
+    throw new Error('backend '+r.status);
+  }catch(e){
+    const r2=await fetch(`snapshot/detail/${detailSlug(crisis,country)}.json`);
+    if(!r2.ok) throw e;                      // no backend AND no snapshot
+    const j=await r2.json(); j.snapshot=true; return j;
+  }
+}
+
 async function openDetail(crisis,country,informIdx,eii,lat,lng){
   document.getElementById('dTitle').textContent=crisis;
   document.getElementById('dSub').textContent=`${country} · INFORM ${informIdx}/10 · EII ${eii}`;
@@ -458,9 +487,8 @@ async function openDetail(crisis,country,informIdx,eii,lat,lng){
   document.getElementById('dBody').innerHTML='<div class="spin">Fetching live data…</div>';
   drawer.classList.add('open');
   try{
-    const r=await fetch(`/api/detail?crisis=${encodeURIComponent(crisis)}&country=${encodeURIComponent(country)}`);
-    if(!r.ok) throw new Error('backend '+r.status);
-    document.getElementById('dBody').innerHTML=buildDetailHTML(await r.json(),nasa);
+    const data=await fetchDetail(crisis,country);
+    document.getElementById('dBody').innerHTML=buildDetailHTML(data,nasa);
   }catch(err){
     document.getElementById('dBody').innerHTML=backendDownHTML(err);
   }
@@ -468,6 +496,7 @@ async function openDetail(crisis,country,informIdx,eii,lat,lng){
 
 function buildDetailHTML(d,nasaHtml){
   const k=d.keys||{}; let h=nasaHtml||'';
+  if(d.snapshot) h+='<div class="snapnote">📸 <b>Snapshot.</b> Tavily news &amp; the ACLED timeline shown here were captured when this static site was built. Run <code>python3 server.py</code> locally for real-time data.</div>';
   // ---- setup card if keys missing ----
   if(!k.tavily || !k.acled){
     h+=`<div class="setup"><b>Connect data sources to go live.</b><br>Add a <code>.env</code> file in the project folder:`;
@@ -566,9 +595,7 @@ async function loadLive(idx){
   _liveLoaded=idx;
   const nasa=nasaImgHTML(d.crisis,d.lat,d.lng);
   try{
-    const r=await fetch(`/api/detail?crisis=${encodeURIComponent(d.crisis)}&country=${encodeURIComponent(d.name)}&days=${days}`);
-    if(!r.ok) throw new Error('backend '+r.status);
-    body.innerHTML=buildDetailHTML(await r.json(),nasa);
+    body.innerHTML=buildDetailHTML(await fetchDetail(d.crisis,d.name,days),nasa);
   }catch(err){ body.innerHTML=backendDownHTML(err); }
   refreshUsage();
 }
@@ -580,6 +607,16 @@ function activateTab(name){
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===name));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   const p=document.getElementById(name+'-panel'); if(p) p.classList.add('active');
+}
+// Methodology layer row -> jump to the Variables tab, scrolled to that layer.
+function showVars(layer){
+  activateTab('vars');
+  const el=document.getElementById('var-'+layer);
+  if(el){
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'),1600);
+  }
 }
 // Map popup -> jump straight to the Live tab for that exact crisis.
 function goLive(idx){
