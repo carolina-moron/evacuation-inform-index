@@ -87,6 +87,16 @@
 .vchip:hover{border-color:var(--navy2)}
 .vchip.on.up{background:#fdecea;border-color:#e6a49b;color:#a5342a;font-weight:600}
 .vchip.on.down{background:#eaf4ec;border-color:#a7cdb0;color:#2f6b3c;font-weight:600}
+/* ---- HASTE damage overlay config ---- */
+.haste-box{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.haste-box label{display:block;font-size:12px;font-weight:600;color:var(--navy);margin-bottom:5px}
+.haste-box input{width:100%;box-sizing:border-box;font-size:11.5px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-family:ui-monospace,Menlo,monospace}
+.haste-btns{display:flex;gap:6px;margin-top:6px}
+.detailbtn.ghost{background:#fff;color:var(--navy2);border:1px solid var(--line)}
+.haste-status{font-size:11.5px;margin-top:6px;line-height:1.4}
+.haste-status.on{color:#2f6b3c}
+.haste-status.warn{color:#a5342a}
+.haste-help{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.45}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:12px 0}
   .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
   .card h4{margin:0 0 4px;color:var(--navy);font-size:14px}
@@ -187,6 +197,16 @@
         <option value="rse">Risk of Evacuating (RSE)</option>
       </select>
       <div class="note"><b>Real data.</b> RSS = INFORM <i>Conditions of people affected</i>; RSE = INFORM <i>Complexity</i> (access, safety, operating environment), each rescaled 1→5. Bubble size scales with the metric. Click a marker for the full breakdown.</div>
+      <div class="haste-box">
+        <label for="hasteUrl">🛰 Damage assessment — <a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet</label>
+        <input id="hasteUrl" type="text" placeholder="Paste HASTE damage-layer tile URL (…/cog/tiles/WebMercatorQuad/{z}/{x}/{y}?scale=1&amp;url=…)">
+        <div class="haste-btns">
+          <button type="button" id="hasteConnect" class="detailbtn" style="width:auto;padding:6px 12px;margin:0">Overlay</button>
+          <button type="button" id="hasteClear" class="detailbtn ghost" style="width:auto;padding:6px 12px;margin:0">Clear</button>
+        </div>
+        <div id="hasteStatus" class="haste-status"></div>
+        <div class="haste-help">HASTE has no public API — run it yourself (<code>docker compose -f docker/docker-compose.yml up</code>), open a disaster project, and copy its damage-layer tile URL. See <a href="HASTE_SETUP.md" target="_blank" rel="noopener">HASTE_SETUP.md</a>.</div>
+      </div>
     </div>
     <div class="legend" id="legend"></div>
   </div>
@@ -235,8 +255,9 @@
     <table class="t">
       <tr><th>CERAI dimension</th><th>What it answers</th><th>How we compute it here</th></tr>
       <tr><td><b>Vulnerability profile</b> (Dimension 3)</td><td>Who is exposed?</td><td>Interactive demographic toggles set a 0.7×–1.3× multiplier that amplifies endangerment and reduces feasibility; the 0.7×–1.3× span is shown as the endangerment <b>range across the population</b></td></tr>
+      <tr><td><b>Damage assessment</b> (satellite)</td><td>What is physically destroyed?</td><td><a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet AI damage maps overlaid on the Map tab — building loss raises endangerment (infrastructure availability), blocked routes lower feasibility</td></tr>
     </table>
-    <div class="note-box"><b>Honest scope.</b> This is a faithful proxy of CERAI's <i>architecture</i> built from data the index already carries (INFORM + ACLED + Open-Meteo) plus the interactive D3 profile — <b>not</b> CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. CERAI scores map to the INFORM 0–10 scale by ÷10, so the two frameworks are directly comparable.</div>
+    <div class="note-box"><b>Honest scope.</b> This is a faithful proxy of CERAI's <i>architecture</i> built from data the index already carries (INFORM + ACLED + Open-Meteo, plus an optional Microsoft HASTE satellite-damage overlay) plus the interactive D3 profile — <b>not</b> CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. CERAI scores map to the INFORM 0–10 scale by ÷10, so the two frameworks are directly comparable.</div>
 
     <h3>Three-layer architecture</h3>
     <p class="click-hint">▸ Click a layer to see its variables &amp; proposed weights.</p>
@@ -330,6 +351,7 @@
       <div class="card"><h4>CDC Social Vulnerability Index</h4><div class="meta">CDC/ATSDR · biennial</div><p>16 variables, 4 equally-weighted themes, percentile ranking — the personal-vulnerability layer.</p><a href="https://www.atsdr.cdc.gov/placeandhealth/svi/index.html" target="_blank" rel="noopener">atsdr.cdc.gov →</a></div>
       <div class="card"><h4>Global Conflict Risk Index</h4><div class="meta">EU JRC · annual</div><p>Conflict-onset risk — separates active conflict (ACLED) from forward-looking risk.</p><a href="https://drmkc.jrc.ec.europa.eu/inform-index" target="_blank" rel="noopener">jrc.ec.europa.eu →</a></div>
       <div class="card"><h4>OECD/JRC Composite Handbook</h4><div class="meta">OECD &amp; JRC</div><p>Definitive reference for normalisation, aggregation, weighting &amp; sensitivity analysis.</p><a href="https://publications.jrc.ec.europa.eu/repository/handle/JRC31473" target="_blank" rel="noopener">publications.jrc.ec.europa.eu →</a></div>
+      <div class="card"><h4>Microsoft HASTE</h4><div class="meta">Microsoft + Planet · MIT · self-host</div><p>AI framework turning satellite imagery into building/route damage maps (Azure Maps, Batch GPU, ML). No public API — deploy it, then overlay its damage tiles on the Map tab.</p><a href="https://aka.ms/HASTE" target="_blank" rel="noopener">aka.ms/HASTE →</a></div>
     </div>
 
     <h3>Key papers</h3>
@@ -396,14 +418,51 @@ const viirsLayer=gibsLayer('VIIRS_SNPP_CorrectedReflectance_TrueColor','VIIRS/SN
 const modisLayer=gibsLayer('MODIS_Terra_CorrectedReflectance_TrueColor','MODIS/Terra true color');
 
 cartoLayer.addTo(map);
-L.control.layers(
+
+/* HASTE damage-assessment overlay (Microsoft HASTE + Planet). HASTE has no
+   public API — the user runs it (docker compose) and pastes a damage-layer
+   TiTiler tile URL, which we render as an XYZ overlay. URL persists locally. */
+const hasteLayer=L.tileLayer('',{opacity:.72, maxZoom:20,
+  attribution:'Damage assessment: Microsoft HASTE + Planet'});
+const layerControl=L.control.layers(
   {'Reference map (CARTO)':cartoLayer,
    '🛰 NASA satellite — VIIRS (daily)':viirsLayer,
    '🛰 NASA satellite — MODIS (daily)':modisLayer},
-  {}, {position:'topleft', collapsed:false}
+  {'🛰 Damage assessment (HASTE)':hasteLayer},
+  {position:'topleft', collapsed:false}
 ).addTo(map);
 
 let layer=L.layerGroup().addTo(map);
+
+/* ---- HASTE damage overlay wiring ---- */
+const HASTE_KEY='haste_tile_url';
+const HASTE_BLANK='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+function hasteApply(url){
+  const st=document.getElementById('hasteStatus');
+  if(url){
+    hasteLayer.setUrl(url);
+    if(!map.hasLayer(hasteLayer)) hasteLayer.addTo(map);
+    st.innerHTML='🟢 Damage overlay connected — toggle <b>Damage assessment (HASTE)</b> in the layer control (top-left).';
+    st.className='haste-status on';
+  }else{
+    if(map.hasLayer(hasteLayer)) map.removeLayer(hasteLayer);
+    hasteLayer.setUrl(HASTE_BLANK);
+    st.textContent=''; st.className='haste-status';
+  }
+}
+(function initHaste(){
+  const inp=document.getElementById('hasteUrl');
+  const saved=localStorage.getItem(HASTE_KEY)||'';
+  if(saved){ inp.value=saved; hasteApply(saved); } else { hasteLayer.setUrl(HASTE_BLANK); }
+  document.getElementById('hasteConnect').addEventListener('click',()=>{
+    const u=inp.value.trim(); const st=document.getElementById('hasteStatus');
+    if(!/\{z\}.*\{x\}.*\{y\}/.test(u)){ st.textContent='That doesn’t look like an XYZ tile URL — it must contain {z}/{x}/{y}.'; st.className='haste-status warn'; return; }
+    localStorage.setItem(HASTE_KEY,u); hasteApply(u);
+  });
+  document.getElementById('hasteClear').addEventListener('click',()=>{
+    inp.value=''; localStorage.removeItem(HASTE_KEY); hasteApply('');
+  });
+})();
 
 const RANGES={edi:[0.7,1.2], rss:[1.5,5], rse:[1.5,5]};
 const LABELS={edi:"EII (evacuate ÷ stay)", rss:"Risk of Staying", rse:"Risk of Evacuating"};
@@ -460,6 +519,7 @@ const SOURCES=[
   ["ACAPS / INFORM Severity","Global crisis severity, humanitarian conditions","Monthly","Free","https://acaps.org"],
   ["ACLED","Conflict events, fatalities, actors, location","Weekly","Free tier","https://acleddata.com"],
   ["Open-Meteo / ECMWF","Live weather &amp; daylight on the route — feeds CERAI feasibility (no key)","Real-time","Free · live","https://open-meteo.com"],
+  ["Microsoft HASTE + Planet","AI damage assessment from satellite imagery — building/route damage overlay (Azure, self-hosted)","On-demand","MIT · self-host","https://aka.ms/HASTE"],
   ["Fragile States Index","12-indicator state fragility, 178 countries","Annual","Free","https://fragilestatesindex.org"],
   ["IOM RICD","Climate displacement risk (macro + micro)","Project","Free","https://environmentalmigration.iom.int"],
   ["IDMC Risk Model","Displacement probability from natural hazards","Annual","Free","https://www.internal-displacement.org"],
@@ -638,6 +698,7 @@ function ceraiBlockHTML(d, detail, weather){
     <div class="cerai-note">${traj}</div>
     ${ceraiGauge('Feasibility — can people move', 'INFORM Complexity + live weather (geom. of route/exit/destination)', feas, 'feas', null)}
     <div class="cerai-note">${wx}</div>
+    <div class="cerai-note">🛰 Damage assessment: <a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet imagery maps building/route damage for this AOI — raises endangerment (infrastructure loss) and lowers feasibility (blocked routes) once connected on the <b>Map</b> tab.</div>
     ${vuln}
     ${gapHtml}
     <div class="cerai-disc">Proxy of <a href="${CERAI_URL}" target="_blank" rel="noopener">CERAI v3</a>'s architecture, built from INFORM + ACLED + Open-Meteo + the D3 profile above — not CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. CERAI scores map to the INFORM 0–10 scale by ÷10.</div>

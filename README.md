@@ -47,6 +47,15 @@ python3 snapshot.py --force    # regenerate all 104 crises
 git add snapshot && git commit -m "Refresh snapshot" && git push
 ```
 
+## Satellite damage assessment (Microsoft HASTE)
+
+The Map tab can overlay AI **building/route damage maps** from
+[Microsoft HASTE](https://aka.ms/HASTE) + Planet. HASTE is self-hosted (no public
+API), so you run it and paste its damage-layer tile URL into EII — see
+[HASTE_SETUP.md](HASTE_SETUP.md). Until connected, the overlay is empty (nothing
+is faked). Damage feeds the CERAI lens: infrastructure loss raises endangerment,
+blocked routes lower feasibility.
+
 ## Files
 
 - `index.html` — the dashboard UI
@@ -55,3 +64,4 @@ git add snapshot && git commit -m "Refresh snapshot" && git push
 - `snapshot.py` — bakes the static snapshot the hosted site falls back to
 - `snapshot/` — pre-generated per-crisis JSON served on GitHub Pages
 - `acled-api/` — ACLED helper script
+- `HASTE_SETUP.md` — how to run Microsoft HASTE and overlay its damage tiles
