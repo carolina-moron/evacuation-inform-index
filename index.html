@@ -97,6 +97,8 @@
 .haste-status.on{color:#2f6b3c}
 .haste-status.warn{color:#a5342a}
 .haste-help{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+.haste-opacity{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:11px;color:var(--muted)}
+.haste-opacity input{flex:1}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:12px 0}
   .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
   .card h4{margin:0 0 4px;color:var(--navy);font-size:14px}
@@ -205,6 +207,7 @@
           <button type="button" id="hasteClear" class="detailbtn ghost" style="width:auto;padding:6px 12px;margin:0">Clear</button>
         </div>
         <div id="hasteStatus" class="haste-status"></div>
+        <div class="haste-opacity"><label for="hasteOpacity">Overlay opacity</label><input id="hasteOpacity" type="range" min="0" max="100" value="72"></div>
         <div class="haste-help">HASTE has no public API — run it yourself (<code>docker compose -f docker/docker-compose.yml up</code>), open a disaster project, and copy its damage-layer tile URL. See <a href="HASTE_SETUP.md" target="_blank" rel="noopener">HASTE_SETUP.md</a>.</div>
       </div>
     </div>
@@ -422,15 +425,35 @@ cartoLayer.addTo(map);
 /* HASTE damage-assessment overlay (Microsoft HASTE + Planet). HASTE has no
    public API — the user runs it (docker compose) and pastes a damage-layer
    TiTiler tile URL, which we render as an XYZ overlay. URL persists locally. */
+// High-res, zoomable satellite imagery (Esri World Imagery — no key). This is
+// the interactive "zoom in on the disaster" base layer; HASTE damage tiles
+// overlay on top of it once connected.
+const esriImagery=L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19, maxNativeZoom:19, attribution:'Imagery © Esri · Maxar · Earthstar Geographics'});
+
 const hasteLayer=L.tileLayer('',{opacity:.72, maxZoom:20,
   attribution:'Damage assessment: Microsoft HASTE + Planet'});
 const layerControl=L.control.layers(
   {'Reference map (CARTO)':cartoLayer,
+   '🛰 High-res satellite (Esri) — zoomable':esriImagery,
    '🛰 NASA satellite — VIIRS (daily)':viirsLayer,
    '🛰 NASA satellite — MODIS (daily)':modisLayer},
   {'🛰 Damage assessment (HASTE)':hasteLayer},
   {position:'topleft', collapsed:false}
 ).addTo(map);
+
+// Fly to a crisis on the high-res imagery so you can pan/zoom the actual site.
+function inspectImagery(lat,lng){
+  if(lat==null||lng==null) return;
+  activateTab('map');
+  setTimeout(()=>{
+    map.invalidateSize();
+    if(map.hasLayer(cartoLayer)) map.removeLayer(cartoLayer);
+    if(!map.hasLayer(esriImagery)) esriImagery.addTo(map);
+    map.flyTo([lat,lng], 14, {duration:1.2});
+  },60);
+}
 
 let layer=L.layerGroup().addTo(map);
 
@@ -461,6 +484,9 @@ function hasteApply(url){
   });
   document.getElementById('hasteClear').addEventListener('click',()=>{
     inp.value=''; localStorage.removeItem(HASTE_KEY); hasteApply('');
+  });
+  document.getElementById('hasteOpacity').addEventListener('input',e=>{
+    hasteLayer.setOpacity((+e.target.value)/100);
   });
 })();
 
@@ -493,6 +519,7 @@ function draw(metric){
         <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
       </table>
       <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${d.drivers||'—'}</p>
+      <button type="button" class="detailbtn" onclick="inspectImagery(${d.lat},${d.lng})">🔍 Zoom high-res satellite imagery</button>
       <button type="button" class="detailbtn" onclick="goLive(${idx})">📈 Live updates &amp; conflict timeline →</button></div>`);
     layer.addLayer(m);
   });
@@ -698,7 +725,8 @@ function ceraiBlockHTML(d, detail, weather){
     <div class="cerai-note">${traj}</div>
     ${ceraiGauge('Feasibility — can people move', 'INFORM Complexity + live weather (geom. of route/exit/destination)', feas, 'feas', null)}
     <div class="cerai-note">${wx}</div>
-    <div class="cerai-note">🛰 Damage assessment: <a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet imagery maps building/route damage for this AOI — raises endangerment (infrastructure loss) and lowers feasibility (blocked routes) once connected on the <b>Map</b> tab.</div>
+    <div class="cerai-note">🛰 Damage assessment: <a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet imagery maps building/route damage for this AOI — raises endangerment (infrastructure loss) and lowers feasibility (blocked routes) once connected on the <b>Map</b> tab.
+      <button type="button" class="detailbtn" style="width:auto;padding:6px 12px;margin:6px 0 0" onclick="inspectImagery(${d.lat},${d.lng})">🔍 Zoom high-res satellite imagery of ${esc(d.crisis)}</button></div>
     ${vuln}
     ${gapHtml}
     <div class="cerai-disc">Proxy of <a href="${CERAI_URL}" target="_blank" rel="noopener">CERAI v3</a>'s architecture, built from INFORM + ACLED + Open-Meteo + the D3 profile above — not CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. CERAI scores map to the INFORM 0–10 scale by ÷10.</div>
