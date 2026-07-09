@@ -7,19 +7,22 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
-    --navy:#1f3a5f; --navy2:#2b4d7a; --ink:#1c2733; --muted:#5b6b7a;
+    --navy:#4a2d7a; --navy2:#6a4bb0; --ink:#1c2733; --muted:#5b6b7a;
     --line:#dce3ea; --bg:#f4f6f9; --card:#fff;
     --c1:#2c7fb8; --c5:#d7301f;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
-  header{background:var(--navy);color:#fff;padding:16px 22px;text-align:center}
+  header{background:linear-gradient(180deg,var(--navy),#3c2568);color:#fff;padding:14px 22px 16px;text-align:center}
+  header .brand{display:inline-block;margin-bottom:8px;line-height:0}
+  header .brand img{height:60px;width:auto;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.35);transition:transform .15s}
+  header .brand:hover img{transform:scale(1.04)}
   header h1{margin:0;font-size:19px;font-weight:650;letter-spacing:.2px}
-  header p{margin:3px 0 0;font-size:12.5px;color:#b9cbe0}
+  header p{margin:3px 0 0;font-size:12.5px;color:#cfc4ec}
   nav{display:flex;gap:2px;background:var(--navy2);padding:0 12px;flex-wrap:wrap;justify-content:center}
   nav button{background:none;border:none;color:#cdd9e6;padding:11px 16px;font-size:13.5px;cursor:pointer;border-bottom:3px solid transparent}
   nav button:hover{color:#fff}
-  nav button.active{color:#fff;border-bottom-color:#7fb1de;font-weight:600}
+  nav button.active{color:#fff;border-bottom-color:#b79ff0;font-weight:600}
   main{padding:0}
   .panel{display:none}
   .panel.active{display:block}
@@ -175,6 +178,9 @@
 </head>
 <body>
 <header>
+  <a class="brand" href="https://www.linkedin.com/company/ethical-tech-lab" target="_blank" rel="noopener" title="NYU Ethical Tech CoLab">
+    <img src="assets/etc-logo.jpg" alt="NYU Ethical Tech CoLab">
+  </a>
   <h1>Evacuation Inform Index — EII</h1>
   <p>A composite "risk of evacuating vs. risk of staying" model · <b>live data: INFORM Severity Index, April 2026 (ACAPS / EU JRC)</b> · 104 active crises</p>
 </header>
