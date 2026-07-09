@@ -178,7 +178,7 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="https://www.linkedin.com/company/ethical-tech-lab" target="_blank" rel="noopener" title="NYU Ethical Tech CoLab">
+  <a class="brand" href="https://ethical-tech-colab.github.io/website/" target="_blank" rel="noopener" title="NYU Ethical Tech CoLab — website">
     <img src="assets/etc-logo.jpg" alt="NYU Ethical Tech CoLab">
   </a>
   <h1>Evacuation Inform Index — EII</h1>
@@ -334,6 +334,46 @@
       <tr><td>Fuzzy AHP</td><td>Low–Med</td><td>Expert survey</td><td>Very high</td><td>Ambiguous variables</td></tr>
       <tr><td>PCA / factor analysis</td><td>None</td><td>Historical</td><td>Medium</td><td>Validation &amp; pruning</td></tr>
     </table>
+
+    <hr class="sec-sep">
+
+    <h2 id="cross-project">Variables integrated from ETC evacuation projects</h2>
+    <p class="lead">Variables and structures mapped across sibling Ethical Tech CoLab evacuation repos, folded in here (or on the roadmap) to enrich the model beyond a demographic-only vulnerability list.</p>
+    <table class="t">
+      <tr><th>Contribution</th><th>From repo</th><th>Status here</th></tr>
+      <tr><td><b>Protection-based vulnerable groups</b> — wounded/acutely sick, pregnant &amp; new mothers, unaccompanied/separated minors, undocumented / ID-gap persons, targeted ethnic·religious·political minorities, linguistic minorities / low literacy (each with an IHL basis, e.g. AP I Arts 16, 78; GC IV Art 23; customary IHL Rules 98–99)</td><td><a href="https://github.com/Ethical-Tech-CoLab/Evac-Sim-Melanie" target="_blank" rel="noopener">Evac-Sim-Melanie</a></td><td><b>Added</b> to the Dimension-3 profile (Live tab). These are protection/legal vulnerabilities, not just mobility ones — several raise endangerment via targeting/detention rather than slowing movement.</td></tr>
+      <tr><td><b>Destination-readiness gatekeepers</b> — Security, Authority consent, host <i>Willingness</i>, Capacity, Shelter, Food/water, Medical capacity; a confirmed host refusal hard-caps readiness</td><td><a href="https://github.com/Ethical-Tech-CoLab/India-EvacSimulation" target="_blank" rel="noopener">India-EvacSimulation</a></td><td>Roadmap — feasibility currently uses a single INFORM-Complexity score; gatekeeper caps would replace it.</td></tr>
+      <tr><td><b>Seven-dimension model (D1–D7)</b> + CERAI cross-derivation (Endangerment = d1·0.45 + d2·0.20 + d6·0.35; Feasibility inverts d3,d4,d5,d7), NATO STANAG level binning</td><td><a href="https://github.com/Ethical-Tech-CoLab/ercf" target="_blank" rel="noopener">ercf</a> · <a href="https://github.com/Ethical-Tech-CoLab/Exodus" target="_blank" rel="noopener">Exodus</a></td><td>Roadmap — a concrete recipe to decompose Endangerment/Feasibility into scored sub-dimensions.</td></tr>
+      <tr><td><b>Corridor / checkpoint dynamics</b> — open/closed exit gates, ceasefire windows, congestion queues, siege "trapped" state, information-environment degradation &amp; misinformation</td><td><a href="https://github.com/Ethical-Tech-CoLab/Evac-Sim-Melanie" target="_blank" rel="noopener">Evac-Sim-Melanie</a></td><td>Roadmap — the static Endangerment/Feasibility pair has no time-varying corridor or information dimension yet.</td></tr>
+      <tr><td><b>Historical calibration harness</b> — differential-evolution fit to 16 in-scope cases (R²=0.855, LOOCV 0.807), with documented out-of-scope failure modes</td><td><a href="https://github.com/Ethical-Tech-CoLab/ercf" target="_blank" rel="noopener">ercf</a></td><td>Informs the <a href="#limitations">limitations</a> below; the model-boundary honesty is the borrowed practice.</td></tr>
+      <tr><td><b>Non-compensatory geometric-mean aggregation</b> + RSS floor of 0.5</td><td><a href="https://github.com/Ethical-Tech-CoLab/evacmodel" target="_blank" rel="noopener">evacmodel</a></td><td>Already used — see <i>Aggregation</i> above.</td></tr>
+    </table>
+
+    <h2 id="provenance">Evidence provenance &amp; traceability</h2>
+    <p class="lead">The lab's lineage in supply-chain <b>traceability and forced-labor mitigation</b> (director Yorke Rhodes, Microsoft) shapes how this index treats evidence. Patterns adapted from that work and two public forced-labor models:</p>
+    <table class="t">
+      <tr><th>Principle</th><th>Adapted from</th><th>Effect on the methodology</th></tr>
+      <tr><td><b>Two-witness evidentiary standard</b> — separate a verified fact from ≥2 independent corroborating reports from a single unverified one</td><td>GFEMS <a href="https://github.com/ShannonGFEMS/FLARE" target="_blank" rel="noopener">FLARE</a></td><td>Sharpens the source-credibility tiers (UN-verified 1.0× → unverified 0.7×) into an evidentiary ladder.</td></tr>
+      <tr><td><b>Deterministic score, not an AI score</b> — the confidence/risk number is a fixed, auditable formula; the language model only supplies source-grounded facts</td><td><a href="https://github.com/Ethical-Tech-CoLab/provenance-search" target="_blank" rel="noopener">provenance-search</a> · <a href="https://github.com/Ethical-Tech-CoLab/arts-provenance-agent" target="_blank" rel="noopener">arts-provenance-agent</a></td><td>The INFORM 0–10 mapping and the D3 multiplier stay reconstructable and never overridden by a model.</td></tr>
+      <tr><td><b>Chain-of-custody: an evidence gap is a risk signal</b></td><td><a href="https://github.com/Ethical-Tech-CoLab/arts-provenance-agent" target="_blank" rel="noopener">arts-provenance-agent</a></td><td>An unverified corridor segment is penalised, not assumed safe — mirroring provenance-gap logic.</td></tr>
+      <tr><td><b>Labeled graceful degradation</b> — a fallback to background/model knowledge is tagged, capped below "verified," and auto-flagged</td><td><a href="https://github.com/Ethical-Tech-CoLab/provenance-search" target="_blank" rel="noopener">provenance-search</a></td><td>Absence of a live verified source never reads as verified.</td></tr>
+      <tr><td><b>Behaviorally-grounded indicator scoring</b> — risk from a weighted set of observable indicators, not one metric</td><td>Global Fishing Watch <a href="https://github.com/GlobalFishingWatch/forcedlabor" target="_blank" rel="noopener">forcedlabor</a></td><td>Precedent for the multi-indicator endangerment/feasibility structure.</td></tr>
+      <tr><td><b>Decision-support, not a verdict</b> — a human retains the high-stakes call</td><td>FLARE ("a decision support tool, not an executioner")</td><td>Governance stance stated explicitly (below).</td></tr>
+    </table>
+    <div class="note-box"><b>Honesty guardrail.</b> This index does <b>not</b> use ILO's 11 forced-labor indicators, machine-learning / positive-unlabeled classifiers, or cryptographically signed credentials — those are the methods of the cited forced-labor models and the provenance passport, referenced as design lineage, not claimed as implemented here.</div>
+
+    <h2 id="limitations">Research limitations</h2>
+    <ul class="refs">
+      <li><b>Proxy construct.</b> Endangerment and feasibility are derived from INFORM <i>Conditions</i> and <i>Complexity</i> sub-scores (plus live ACLED/weather), not CERAI's full 22-variable IHL engine. Treat them as a faithful architectural proxy, not a validated instrument.</li>
+      <li><b>Researcher-assigned weights.</b> All weights are best estimates pending expert validation (Delphi → Fuzzy AHP) — at the same evidentiary level as INFORM's initial weights, but not yet consensus-tested.</li>
+      <li><b>No ground-truth calibration.</b> Independent ground truth for evacuation decisions does not exist. Sibling calibration (ercf: 16 cases, R²=0.855) is face validity, not statistical generalisation, and is explicitly <b>out of scope</b> for genocide, large-enclave precision operations, and sieges beyond ~90 days.</li>
+      <li><b>Population-level, illustrative vulnerability.</b> The Dimension-3 profile is a user-set demographic scenario applied as a 0.7×–1.3× multiplier — not measured household data — and cannot capture individual circumstances.</li>
+      <li><b>Static snapshot.</b> The Endangerment/Feasibility pair has no corridor/checkpoint dynamics, ceasefire windows, information-environment degradation, or misinformation (all modelled in Evac-Sim-Melanie, not here). Hosted news/ACLED are captured snapshots; weather is live.</li>
+      <li><b>No political-will modelling.</b> The index cannot model actor behaviour, negotiation status, sudden shifts in belligerent intent, or consent dynamics.</li>
+      <li><b>Evidence quality varies.</b> Source-credibility tiering is a design principle; live inputs (ACLED, Tavily) differ in verification and are not yet weighted by it in code.</li>
+      <li><b>Satellite &amp; damage layers are optional.</b> The HASTE damage overlay requires a self-hosted deployment; without it, physical-damage evidence is absent.</li>
+      <li><b>Correlation, not causation.</b> The index prioritises attention; it is decision-support and must not be the sole basis for an evacuation decision.</li>
+    </ul>
   </div>
 </section>
 
@@ -683,13 +723,22 @@ function ceraiGauge(label,sub,pct,kind,threshold,range){
    each factor shifts a multiplier by ±0.06 (capped 0.7–1.3) that AMPLIFIES
    endangerment and REDUCES feasibility (two causally distinct pathways). The
    0.7×–1.3× span is also shown as the range across the population. */
+// Base 6 factors + groups mapped in the ETC evacuation repos (Evac-Sim-Melanie)
+// that a demographic-only list was missing. ↑ raises endangerment / lowers
+// feasibility; ↓ the reverse.
 const VULN_FACTORS=[
-  {k:'children',   label:'Young children (<12)',            dir:+1},
-  {k:'elderly',    label:'Elderly (65+)',                   dir:+1},
-  {k:'medical',    label:'Disabled / medically dependent',  dir:+1},
-  {k:'gbv',        label:'Gendered (GBV) risk',             dir:+1},
-  {k:'experience', label:'Prior evacuation experience',     dir:-1},
-  {k:'finance',    label:'Financial resources',             dir:-1},
+  {k:'children',     label:'Young children (<12)',            dir:+1},
+  {k:'elderly',      label:'Elderly (65+)',                   dir:+1},
+  {k:'medical',      label:'Disabled / medically dependent',  dir:+1},
+  {k:'wounded',      label:'Wounded / acutely sick',          dir:+1},
+  {k:'pregnant',     label:'Pregnant / new mothers',          dir:+1},
+  {k:'unaccompanied',label:'Unaccompanied / separated minors',dir:+1},
+  {k:'gbv',          label:'Gendered (GBV) risk',             dir:+1},
+  {k:'targeted',     label:'Targeted ethnic/religious/political group', dir:+1},
+  {k:'undocumented', label:'Undocumented / ID gaps',          dir:+1},
+  {k:'linguistic',   label:'Linguistic minority / low literacy', dir:+1},
+  {k:'experience',   label:'Prior evacuation experience',     dir:-1},
+  {k:'finance',      label:'Financial resources',             dir:-1},
 ];
 const vulnState=new Set();
 function vulnMultiplier(){
@@ -722,7 +771,7 @@ function ceraiBlockHTML(d, detail, weather){
     return `<button type="button" class="vchip ${on?'on':''} ${f.dir>0?'up':'down'}" aria-pressed="${on}" onclick="toggleVuln('${f.k}')">${f.dir>0?'▲':'▼'} ${f.label}</button>`;
   }).join('');
   const vuln=`<div class="cerai-vuln">
-    <div class="cerai-note"><b>Vulnerability profile — Dimension 3</b> · multiplier <b>×${m.toFixed(2)}</b> &nbsp;<span class="cg-sub" style="display:inline">▲ raises endangerment / lowers feasibility · ▼ the reverse</span></div>
+    <div class="cerai-note"><b>Vulnerability profile — Dimension 3</b> · multiplier <b>×${m.toFixed(2)}</b> &nbsp;<span class="cg-sub" style="display:inline">▲ raises endangerment / lowers feasibility · ▼ the reverse · protection-based groups mapped from ETC evac projects</span></div>
     <div class="vchips">${chips}</div>
   </div>`;
   return `<div class="cerai">
