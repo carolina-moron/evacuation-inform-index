@@ -22,10 +22,15 @@ Prerequisites (this is a heavy stack — plan accordingly):
 - Planet imagery access for real disaster imagery
 
 ```bash
-git clone https://github.com/microsoft/haste.git
+# Ethical-Tech-CoLab fork of microsoft/haste (kept alongside this index)
+git clone https://github.com/Ethical-Tech-CoLab/haste.git
 cd haste
 docker compose -f docker/docker-compose.yml up
 ```
+
+> This project uses a fork of HASTE — **[Ethical-Tech-CoLab/haste](https://github.com/Ethical-Tech-CoLab/haste)**
+> (MIT, forked from [microsoft/haste](https://github.com/microsoft/haste)) — so the
+> evacuation index and its damage-assessment backend live under the same org.
 
 Local endpoints once it's up:
 
