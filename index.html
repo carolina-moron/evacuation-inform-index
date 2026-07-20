@@ -98,6 +98,7 @@
 .detailbtn.ghost{background:#fff;color:var(--navy2);border:1px solid var(--line)}
 .haste-status{font-size:11.5px;margin-top:6px;line-height:1.4}
 .haste-status.on{color:#2f6b3c}
+.haste-status.part{color:#8a6420}
 .haste-status.warn{color:#a5342a}
 .haste-help{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.45}
 .haste-opacity{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:11px;color:var(--muted)}
@@ -506,17 +507,44 @@ let layer=L.layerGroup().addTo(map);
 /* ---- HASTE damage overlay wiring ---- */
 const HASTE_KEY='haste_tile_url';
 const HASTE_BLANK='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-function hasteApply(url){
+function hasteSet(cls,html){
   const st=document.getElementById('hasteStatus');
+  st.innerHTML=html; st.className='haste-status'+(cls?' '+cls:'');
+}
+function hasteIsLocal(u){ return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(u); }
+
+/* Tile outcomes decide the status — a URL that merely *looks* right proves
+   nothing about whether HASTE is running or reachable. TiTiler legitimately
+   404s for tiles outside the project AOI, so errors alone aren't failure:
+   only a batch that loaded zero tiles is. */
+let hasteOk=0, hasteErr=0, hasteActive=false, hasteUrlCur='';
+hasteLayer.on('tileload',()=>{
+  if(!hasteActive) return;
+  if(++hasteOk===1) hasteSet('on','🟢 Damage tiles loading — toggle <b>Damage assessment (HASTE)</b> in the layer control (top-left).');
+});
+hasteLayer.on('tileerror',()=>{ if(hasteActive) hasteErr++; });
+hasteLayer.on('load',()=>{
+  if(!hasteActive||hasteErr===0) return;
+  if(hasteOk===0){
+    let hint='';
+    if(location.protocol==='https:'&&/^http:/i.test(hasteUrlCur)&&hasteIsLocal(hasteUrlCur))
+      hint=' This page is HTTPS and HASTE is plain <code>http://localhost</code> — Chrome and Firefox allow that, but Safari blocks it.';
+    hasteSet('warn','🔴 No tiles loaded from that URL — the overlay is <b>not</b> connected. Check HASTE is running, that the damage-layer URL is current, and the browser console for CORS/404 errors.'+hint);
+  }else{
+    hasteSet('part','🟡 Partial coverage — tiles outside the HASTE project AOI come back empty. Pan/zoom to the disaster area to see the damage layer.');
+  }
+});
+
+function hasteApply(url){
+  hasteOk=0; hasteErr=0; hasteActive=!!url; hasteUrlCur=url||'';
   if(url){
+    hasteSet('','⏳ Requesting damage tiles…');
     hasteLayer.setUrl(url);
     if(!map.hasLayer(hasteLayer)) hasteLayer.addTo(map);
-    st.innerHTML='🟢 Damage overlay connected — toggle <b>Damage assessment (HASTE)</b> in the layer control (top-left).';
-    st.className='haste-status on';
   }else{
     if(map.hasLayer(hasteLayer)) map.removeLayer(hasteLayer);
     hasteLayer.setUrl(HASTE_BLANK);
-    st.textContent=''; st.className='haste-status';
+    hasteSet('','');
   }
 }
 (function initHaste(){
@@ -524,8 +552,13 @@ function hasteApply(url){
   const saved=localStorage.getItem(HASTE_KEY)||'';
   if(saved){ inp.value=saved; hasteApply(saved); } else { hasteLayer.setUrl(HASTE_BLANK); }
   document.getElementById('hasteConnect').addEventListener('click',()=>{
-    const u=inp.value.trim(); const st=document.getElementById('hasteStatus');
-    if(!/\{z\}.*\{x\}.*\{y\}/.test(u)){ st.textContent='That doesn’t look like an XYZ tile URL — it must contain {z}/{x}/{y}.'; st.className='haste-status warn'; return; }
+    const u=inp.value.trim();
+    if(!(/\{z\}/.test(u)&&/\{x\}/.test(u)&&/\{y\}/.test(u))){
+      hasteSet('warn','That doesn’t look like an XYZ tile URL — it must contain {z}, {x} and {y}.'); return;
+    }
+    if(location.protocol==='https:'&&/^http:/i.test(u)&&!hasteIsLocal(u)){
+      hasteSet('warn','🔴 This page is served over HTTPS, so the browser will block tiles from an <code>http://</code> host. Serve HASTE over HTTPS, or run EII locally (<code>python3 server.py</code>).'); return;
+    }
     localStorage.setItem(HASTE_KEY,u); hasteApply(u);
   });
   document.getElementById('hasteClear').addEventListener('click',()=>{

@@ -68,7 +68,21 @@ On the EII **Map** tab, paste that URL into **🛰 Damage assessment (HASTE)** �
 (top-left) and adjust against the crisis markers. The URL is saved in your
 browser (localStorage) for next time; **Clear** removes it.
 
-The dev compose uses wildcard CORS, so the overlay works from both a local EII
-(`python3 server.py`) and the hosted GitHub Pages build calling your local
-HASTE. For a shared deployment, host HASTE on Azure and paste that public tile
-URL instead.
+EII reports the overlay's real state rather than assuming it: pasting a URL
+shows **⏳ Requesting damage tiles…**, and the status only turns **🟢** once tiles
+actually load. If none load it turns **🔴 not connected**; if some load and some
+404 it turns **🟡 partial**, which is normal — TiTiler serves nothing outside the
+project AOI, so pan to the disaster area.
+
+## Mixed content (HTTPS → HTTP)
+
+The dev compose uses wildcard CORS, but the transport still matters:
+
+| EII served from | HASTE at | Works? |
+|---|---|---|
+| `python3 server.py` (http) | `http://localhost:7071` | ✅ yes |
+| GitHub Pages (https) | `http://localhost:7071` | ⚠️ Chrome/Firefox yes (localhost is a trustworthy origin); **Safari blocks it** |
+| GitHub Pages (https) | `http://<remote-host>` | ❌ blocked as mixed content — EII refuses the URL up front |
+
+For a shared deployment, host HASTE on Azure behind **HTTPS** and paste that
+public tile URL.
