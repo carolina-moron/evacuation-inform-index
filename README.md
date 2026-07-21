@@ -1,5 +1,8 @@
 # Evacuation Inform Index (EII)
 
+**[Live site](https://ethical-tech-colab.github.io/evacuation-inform-index-carolina/)** ·
+**[Research report](EII-Paper.md)** (plain-language, non-technical)
+
 A composite index for assessing evacuation conditions, with preliminary weights
 synthesised from **INFORM**, **ACLED** and **FSI** logic — to be validated by
 AHP expert surveys.
