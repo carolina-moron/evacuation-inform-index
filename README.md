@@ -26,6 +26,12 @@ python server.py
 
 Then open `index.html` (or the URL the server prints).
 
+Every key is optional. With none set, the map, scores, weather and satellite
+layers still work; only the news and conflict panels go quiet, each naming the
+key it is missing. See **[INTEGRATIONS.md](INTEGRATIONS.md)** for every external
+service the project calls, why each is called from the server or the browser,
+and what to check when one misbehaves.
+
 ## Hosted site (static snapshot)
 
 GitHub Pages serves static files only, so it can't run `server.py`. To make the
@@ -64,4 +70,6 @@ blocked routes lower feasibility.
 - `snapshot.py` — bakes the static snapshot the hosted site falls back to
 - `snapshot/` — pre-generated per-crisis JSON served on GitHub Pages
 - `acled-api/` — ACLED helper script
+- `INTEGRATIONS.md` — every external API, how it is called, and how to debug it
 - `HASTE_SETUP.md` — how to run Microsoft HASTE and overlay its damage tiles
+- `EII-Paper.md` — plain-language research report on what the index does
