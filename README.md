@@ -73,3 +73,19 @@ blocked routes lower feasibility.
 - `INTEGRATIONS.md` — every external API, how it is called, and how to debug it
 - `HASTE_SETUP.md` — how to run Microsoft HASTE and overlay its damage tiles
 - `EII-Paper.md` — plain-language research report on what the index does
+
+---
+
+## Peer Review
+
+An independent academic peer review of this report is available in [`peer-review/`](peer-review/) ([Word](peer-review/EII-Peer-Review.docx) &middot; [Markdown](peer-review/EII-Peer-Review.md)).
+
+**Recommendation:** Major revisions
+
+**What the review found:**
+
+- The central proxy is unvalidated: INFORM Complexity (humanitarian access for responders) is used as a stand-in for civilian-evacuation risk, and the report never shows where the two diverge.
+- The headline ratio is fragile: the arbitrary 0.5 floor can swing it ~2.5x, and equal ratios hide very different absolute stakes.
+- No worked example: a tool meant to make a comparison visible never walks one real crisis through the numbers.
+
+**Noted strength:** Scoring leaving-vs-staying and danger-vs-feasibility as separate dimensions is a genuine contribution, paired with unusually honest self-disclosure.
