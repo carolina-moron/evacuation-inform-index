@@ -436,7 +436,17 @@ document.getElementById('srcgrid').innerHTML = SOURCES.map(s=>`
 /* ---------- Detail drawer: live Tavily news + ACLED timeline ---------- */
 const drawer=document.getElementById('drawer');
 function closeDetail(){ drawer.classList.remove('open'); }
-function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// Only http(s) URLs may reach an href — blocks javascript:/data:/vbscript: and
+// anything else the (third-party, attacker-influenceable) news feed can supply.
+function safeUrl(u){
+  const s=String(u==null?'':u).trim();
+  if(!s) return '#';
+  try{
+    const p=new URL(s, document.baseURI);
+    return (p.protocol==='http:'||p.protocol==='https:') ? p.href : '#';
+  }catch(e){ return '#'; }
+}
 function fmtDate(s){ if(!s) return ''; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
 
 // NASA satellite snapshot for a location (server proxies the keyed Earth Imagery API).
@@ -481,7 +491,7 @@ function buildDetailHTML(d,nasaHtml){
     h+='<h4>🟢 Live developments — Tavily</h4>';
     if(t.answer) h+=`<div class="ans">${esc(t.answer)}</div>`;
     (t.items||[]).forEach(it=>{
-      h+=`<div class="news"><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>
+      h+=`<div class="news"><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a>
         <div class="m">${esc(it.source||'')}${it.date?' · '+fmtDate(it.date):''}</div>
         ${it.snippet?`<p>${esc(it.snippet)}…</p>`:''}</div>`;
     });
@@ -528,7 +538,7 @@ function buildDetailHTML(d,nasaHtml){
         const dd=new Date(it.date);
         const key=dd.toLocaleDateString(undefined,{year:'numeric',month:'long'});
         if(key!==curKey){ curKey=key; h+=`<li class="tl-group"><span class="g">${key}</span></li>`; }
-        h+=`<li><div class="d">${fmtDate(it.date)} · ${esc(it.source||'')}</div><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a></li>`;
+        h+=`<li><div class="d">${fmtDate(it.date)} · ${esc(it.source||'')}</div><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a></li>`;
       });
       h+='</ul>';
     }
