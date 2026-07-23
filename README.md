@@ -69,6 +69,30 @@ One caveat is stated on the map itself: a heatmap blurs between points, so the
 colour *between* two crises is a rendering effect, not a measurement. EII scores
 discrete crises, not a continuous risk surface.
 
+**Crisis-type filter.** Four checkboxes group INFORM's drivers into
+environmental (floods, drought, cyclone, earthquake), conflict & violence,
+international displacement, and political & economic. The export truncates
+driver strings at 60 characters (`"Political/econom"`, `"Cyc"`), so matching is
+by prefix, which recovers the intended driver and makes the counts agree with
+the Sense-2 figure in Methodology (50 / 39 / 25 / 22 / 18 / 9 / 1). Crises carry
+several drivers, so the groups overlap by design and a crisis shows when *any*
+of its drivers is ticked. All four are on by default and every one of the 104
+crises lands in at least one, so the unfiltered map is the whole dataset. The
+legend says so whenever a filter is narrowing the view.
+
+**Roads & streets** is a transparent overlay that rides on whichever base layer
+is showing, so the network reads *against* the imagery instead of replacing it.
+Tiles are Esri World Transportation (OpenStreetMap / HERE / Garmin), keyless.
+Not Google: Leaflet cannot lawfully consume Google's tiles directly, and the
+supported route through the Maps JavaScript API needs a billing-enabled key
+embedded in the page, which a public static deployment cannot hold safely.
+
+**Clickable legal citations.** Every provision cited in Methodology opens an
+explainer with four parts: what it says in plain words, the operative text, why
+this index cites it, and *how far that is justified*. The fourth is the point —
+several do not survive it, and the panels say so. Thirteen provisions, also
+listed outright at the foot of the tab.
+
 ## Where the crises actually are
 
 INFORM publishes no coordinates. The original `data.js` therefore placed every
@@ -130,6 +154,27 @@ cannot be drawn as routes on the map, and **zero reports is not evidence that
 roads are open**. This doubles the Tavily cost of a detail call to 2 credits;
 pass `?roads=0` (or `snapshot.py --no-roads`) to skip it.
 
+**On the map.** `build_roads_layer.py` flattens the road block out of all 104
+`snapshot/detail/*.json` into `snapshot/roads.json` (~10 KB), so the
+*🚧 Road access — reported blockages* overlay costs one request instead of 104,
+fetched only when the layer is switched on. A pin sits at the **crisis**, never
+at the blockage, for the coordinate reason above, and says so in its popup.
+
+Coverage is the part that matters, and the layer states it:
+
+| | crises |
+|---|---:|
+| Searched, reports found (pinned) | 11 |
+| Searched, nothing found | 31 |
+| **Never searched** | **62** |
+| Total | 104 |
+
+An unpinned crisis is therefore ambiguous between *searched, nothing found* and
+*never searched*, and on a map about whether people can get out the silent
+reading — no pin, roads fine — is the dangerous one. Run
+`python3 snapshot_roads.py` to close the gap (1 Tavily credit per crisis), then
+re-run `python3 build_roads_layer.py` and commit `snapshot/`.
+
 ## Running locally
 
 ```bash
@@ -185,6 +230,8 @@ blocked routes lower feasibility.
 - `geo.js` — generated; the coordinates the map actually uses
 - `server.py` — live backend (news + ACLED timeline, cached)
 - `snapshot.py` — bakes the static snapshot the hosted site falls back to
+- `snapshot_roads.py` — backfills the road-access field into existing snapshots
+- `build_roads_layer.py` — flattens those road blocks into `snapshot/roads.json`
 - `snapshot/` — pre-generated per-crisis JSON served on GitHub Pages
 - `acled-api/` — ACLED helper script
 - `INTEGRATIONS.md` — every external API, how it is called, and how to debug it
