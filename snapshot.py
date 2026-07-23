@@ -10,6 +10,10 @@ Usage:
     python3 snapshot.py            # generate missing snapshots (resumable)
     python3 snapshot.py --force    # regenerate everything
     python3 snapshot.py --days 60  # time window for Tavily news (default 60)
+    python3 snapshot.py --no-roads # skip the road-access search (halves credits)
+
+Each crisis costs 2 Tavily credits (news + road access), so a full 104-crisis
+run spends ~208. --no-roads brings that back to ~104.
 
 Keys are read from the gitignored .env, exactly like server.py.
 """
@@ -34,6 +38,7 @@ def load_crises():
 
 def main():
     force = "--force" in sys.argv
+    roads = "--no-roads" not in sys.argv
     days = 60
     if "--days" in sys.argv:
         days = int(sys.argv[sys.argv.index("--days") + 1])
@@ -41,7 +46,9 @@ def main():
     env = server.load_env()
     tk = env.get("TAVILY_API_KEY")
     ae, ap = env.get("ACLED_EMAIL"), env.get("ACLED_PASSWORD")
-    print(f"keys: tavily={bool(tk)} acled={bool(ae and ap)}")
+    print(f"keys: tavily={bool(tk)} acled={bool(ae and ap)}  roads={roads}")
+    if tk and roads:
+        print("note: 2 Tavily credits per crisis (news + roads); --no-roads halves it")
 
     os.makedirs(OUT, exist_ok=True)
     crises = load_crises()
@@ -64,7 +71,7 @@ def main():
             continue
 
         resp = {"crisis": crisis, "country": country, "cached": False, "days": days,
-                "tavily": None, "acled": None, "errors": [],
+                "tavily": None, "acled": None, "roads": None, "errors": [],
                 "keys": {"tavily": bool(tk), "acled": bool(ae and ap)},
                 "snapshot": True}
         if tk:
@@ -74,6 +81,11 @@ def main():
                     days=days)
             except Exception as e:
                 resp["errors"].append(f"tavily: {e}")
+            if roads:
+                try:
+                    resp["roads"] = server.tavily_roads(tk, country, crisis, days=days)
+                except Exception as e:
+                    resp["errors"].append(f"roads: {e}")
         if ae and ap:
             try:
                 resp["acled"] = server.acled_timeline(ae, ap, country)
@@ -82,13 +94,14 @@ def main():
 
         with open(path, "w", encoding="utf-8") as f:
             json.dump(resp, f, ensure_ascii=False)
-        if resp["errors"] and not (resp["tavily"] or resp["acled"]):
+        if resp["errors"] and not (resp["tavily"] or resp["acled"] or resp["roads"]):
             failed += 1
         else:
             done += 1
         n_news = len((resp.get("tavily") or {}).get("items") or [])
         n_mon = len((resp.get("acled") or {}).get("months") or [])
-        print(f"[{i}/{len(crises)}] ok    {slug}  news={n_news} acled_months={n_mon} "
+        n_road = len((resp.get("roads") or {}).get("items") or [])
+        print(f"[{i}/{len(crises)}] ok    {slug}  news={n_news} acled_months={n_mon} roads={n_road} "
               + (f"errors={resp['errors']}" if resp["errors"] else ""))
         time.sleep(0.4)  # be gentle on the APIs
 

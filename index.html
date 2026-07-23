@@ -27,13 +27,20 @@
   .panel{display:none}
   .panel.active{display:block}
   /* MAP */
-  #mapwrap{position:relative;height:calc(100vh - 104px)}
+  /* --maptop is measured from the real header+nav height at runtime; the 104px
+     fallback under-measures the two-line header and pushed the legend off-screen. */
+  #mapwrap{position:relative;height:calc(100vh - var(--maptop,104px))}
   #map{position:absolute;inset:0}
   .legend,.controls{position:absolute;z-index:1000;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.12);font-size:12.5px}
   .legend{bottom:18px;left:18px;padding:10px 12px;line-height:1.7}
   .legend b{display:block;margin-bottom:5px;font-size:12px}
   .legend i{width:13px;height:13px;display:inline-block;border-radius:50%;margin-right:7px;vertical-align:-1px}
-  .controls{top:14px;right:14px;padding:10px 12px;max-width:230px}
+  .legend .gradbar{width:170px;height:11px;border-radius:6px;border:1px solid var(--line);margin:2px 0 3px}
+  .legend .gradends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);line-height:1.3}
+  .legend .legnote{margin-top:5px;font-size:11px;color:var(--muted);max-width:190px;line-height:1.4}
+  .controls select+label{margin-top:10px}
+  /* Scroll rather than overflow the map: this panel grew past short viewports. */
+  .controls{top:14px;right:14px;padding:10px 12px;max-width:230px;max-height:calc(100% - 28px);overflow-y:auto;overscroll-behavior:contain}
   .controls label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
   .controls select{width:100%;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:13px}
   .controls .note{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.4}
@@ -127,6 +134,19 @@
   .news a{font-size:13.5px;font-weight:600;text-decoration:none;line-height:1.3}
   .news .m{font-size:11px;color:var(--muted);margin:3px 0}
   .news p{font-size:12px;color:#43505c;margin:4px 0 0;line-height:1.45}
+  /* Road access */
+  .road-sum{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 6px}
+  .rpill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap}
+  .r-blocked{background:#b2182b}
+  .r-damaged{background:#d7601f}
+  .r-checkpoint{background:#8a6d1f}
+  .r-reopened{background:#2c7a4b}
+  .rsignal{font-size:11.5px;color:var(--muted)}
+  .rsignal b{color:var(--navy)}
+  .ramb{font-size:10.5px;color:#8a6d1f;background:#fdf6e3;border:1px solid #ecd9a6;border-radius:8px;padding:1px 6px;margin-left:6px}
+  .road-caveat{font-size:11px;color:var(--muted);line-height:1.45;margin:0 0 8px}
+  .news.road{border-left:3px solid #e3e8ee}
+  .news.road a{display:block;margin-top:5px}
   .bars{display:flex;align-items:flex-end;gap:3px;height:120px;padding:6px 0;border-bottom:1px solid var(--line)}
   .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
   .bar .f{width:100%;background:var(--c5);border-radius:2px 2px 0 0}
@@ -205,7 +225,14 @@
         <option value="rss">Risk of Staying (RSS)</option>
         <option value="rse">Risk of Evacuating (RSE)</option>
       </select>
-      <div class="note"><b>Real data.</b> RSS = INFORM <i>Conditions of people affected</i>; RSE = INFORM <i>Complexity</i> (access, safety, operating environment), each rescaled 1→5. Bubble size scales with the metric. Click a marker for the full breakdown.</div>
+      <label for="display">Display as</label>
+      <select id="display">
+        <option value="heat">Heatmap</option>
+        <option value="circles">Graduated circles</option>
+        <option value="both">Heatmap + circles</option>
+      </select>
+      <div class="note"><b>Real data.</b> RSS = INFORM <i>Conditions of people affected</i>; RSE = INFORM <i>Complexity</i> (access, safety, operating environment), each rescaled 1→5. Click any crisis dot for the full breakdown.</div>
+      <div class="note"><b>Reading the heatmap.</b> Intensity is the selected metric, and overlapping crises reinforce each other. The smooth field between dots is a rendering effect, <i>not</i> a measurement — EII scores discrete crises, so only the dots carry data.</div>
       <div class="haste-box">
         <label for="hasteUrl">🛰 Damage assessment — <a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet</label>
         <input id="hasteUrl" type="text" placeholder="Paste HASTE damage-layer tile URL (…/cog/tiles/WebMercatorQuad/{z}/{x}/{y}?scale=1&amp;url=…)">
@@ -429,6 +456,7 @@
 </aside>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="data.js"></script>
 <script>
 /* ---------- Live data from INFORM Severity Index (see data.js) ---------- */
@@ -467,8 +495,6 @@ function gibsLayer(product,desc){
 const viirsLayer=gibsLayer('VIIRS_SNPP_CorrectedReflectance_TrueColor','VIIRS/SNPP true color');
 const modisLayer=gibsLayer('MODIS_Terra_CorrectedReflectance_TrueColor','MODIS/Terra true color');
 
-cartoLayer.addTo(map);
-
 /* HASTE damage-assessment overlay (Microsoft HASTE + Planet). HASTE has no
    public API — the user runs it (docker compose) and pastes a damage-layer
    TiTiler tile URL, which we render as an XYZ overlay. URL persists locally. */
@@ -479,11 +505,25 @@ const esriImagery=L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   {maxZoom:19, maxNativeZoom:19, attribution:'Imagery © Esri · Maxar · Earthstar Geographics'});
 
+// High-res imagery is the default base layer: the map's purpose is inspecting
+// the actual terrain of a crisis, and the heatmap reads clearly over it.
+esriImagery.addTo(map);
+// Place names are lost on raw imagery, so a transparent labels/boundaries layer
+// rides on top of it. It is a pane above the base map but below the data.
+const esriLabels=L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19, maxNativeZoom:19, opacity:.9}).addTo(map);
+// Labels belong to the imagery only — a reference basemap already has its own.
+map.on('baselayerchange',e=>{
+  if(e.layer===esriImagery){ if(!map.hasLayer(esriLabels)) esriLabels.addTo(map); }
+  else if(map.hasLayer(esriLabels)) map.removeLayer(esriLabels);
+});
+
 const hasteLayer=L.tileLayer('',{opacity:.72, maxZoom:20,
   attribution:'Damage assessment: Microsoft HASTE + Planet'});
 const layerControl=L.control.layers(
-  {'Reference map (CARTO)':cartoLayer,
-   '🛰 High-res satellite (Esri) — zoomable':esriImagery,
+  {'🛰 High-res satellite (Esri) — zoomable':esriImagery,
+   'Reference map (CARTO)':cartoLayer,
    '🛰 NASA satellite — VIIRS (daily)':viirsLayer,
    '🛰 NASA satellite — MODIS (daily)':modisLayer},
   {'🛰 Damage assessment (HASTE)':hasteLayer},
@@ -498,11 +538,24 @@ function inspectImagery(lat,lng){
     map.invalidateSize();
     if(map.hasLayer(cartoLayer)) map.removeLayer(cartoLayer);
     if(!map.hasLayer(esriImagery)) esriImagery.addTo(map);
+    if(!map.hasLayer(esriLabels)) esriLabels.addTo(map);
     map.flyTo([lat,lng], 14, {duration:1.2});
   },60);
 }
 
 let layer=L.layerGroup().addTo(map);
+
+/* ---------- Heatmap layer (leaflet.heat) ----------
+   Intensity is the selected metric, normalised to its display range and
+   floored so the lowest-scoring crisis still renders. The gradient reuses
+   ramp() so the heat colours and the legend cannot drift apart.
+   Caveat surfaced in the UI: leaflet.heat blurs between points, so the
+   field *between* crises is a rendering artefact — only the dots are data. */
+const HEAT_MIN_INTENSITY=0.18;   // keeps min-value crises visible
+const HEAT_GRADIENT=(()=>{ const g={}; for(let i=0;i<=4;i++){ const t=i/4; g[Math.max(t,0.01)]=ramp(t,0,1); } return g; })();
+// Tighter blur and a higher opacity floor than the plugin defaults: the base
+// layer is dark satellite imagery, against which a soft heat wash disappears.
+const heatLayer=L.heatLayer([],{radius:30,blur:20,minOpacity:.55,max:1,gradient:HEAT_GRADIENT});
 
 /* ---- HASTE damage overlay wiring ---- */
 const HASTE_KEY='haste_tile_url';
@@ -574,14 +627,23 @@ const LABELS={edi:"EII (evacuate ÷ stay)", rss:"Risk of Staying", rse:"Risk of 
 
 function metricVal(d,m){ return m==="edi"?edi(d):d[m]; }
 
-function draw(metric){
+function draw(metric,mode){
+  mode=mode||document.getElementById('display').value;
   layer.clearLayers();
   const [mn,mx]=RANGES[metric];
+  const showHeat=mode!=='circles', showCircles=mode!=='heat';
+  const heatPts=[];
   LOCS.forEach((d,idx)=>{
     const v=metricVal(d,metric);
+    const t=Math.max(0,Math.min(1,(v-mn)/(mx-mn)));
     const col=ramp(v,mn,mx);
-    const r=8+ (Math.max(0,Math.min(1,(v-mn)/(mx-mn)))*14);
-    const m=L.circleMarker([d.lat,d.lng],{radius:r,fillColor:col,color:'#fff',weight:1.5,fillOpacity:.88});
+    heatPts.push([d.lat,d.lng,HEAT_MIN_INTENSITY+(1-HEAT_MIN_INTENSITY)*t]);
+    // In heat-only mode the dots shrink to plain click targets — the heat
+    // carries the value, so sizing them by it too would double-encode.
+    const r=showCircles ? 8+t*14 : 5;
+    const m=L.circleMarker([d.lat,d.lng],showCircles
+      ? {radius:r,fillColor:col,color:'#fff',weight:1.5,fillOpacity:.88}
+      : {radius:r,fillColor:'#0b2545',color:'#fff',weight:1.5,fillOpacity:.9});
     const e=edi(d);
     const verdict = e>1.05 ? '<span class="pill" style="background:#d7301f">Staying favored</span>'
                   : e<0.95 ? '<span class="pill" style="background:#2c7fb8">Evacuation favored</span>'
@@ -602,23 +664,49 @@ function draw(metric){
       <button type="button" class="detailbtn" onclick="goLive(${idx})">📈 Live updates &amp; conflict timeline →</button></div>`);
     layer.addLayer(m);
   });
-  drawLegend(metric);
+  heatLayer.setLatLngs(showHeat?heatPts:[]);
+  if(showHeat){ if(!map.hasLayer(heatLayer)) heatLayer.addTo(map); }
+  else if(map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+  drawLegend(metric,mode);
 }
 
-function drawLegend(metric){
+function drawLegend(metric,mode){
   const [mn,mx]=RANGES[metric];
-  const steps=4, el=document.getElementById('legend');
+  const el=document.getElementById('legend');
   let html=`<b>${LABELS[metric]}</b>`;
-  for(let i=0;i<steps;i++){
-    const v=mn+(mx-mn)*(i/(steps-1));
-    html+=`<div><i style="background:${ramp(v,mn,mx)}"></i>${v.toFixed(metric==='edi'?2:1)}${i===0?' (lower)':i===steps-1?' (higher)':''}</div>`;
+  if(mode!=='circles'){
+    // Continuous bar: a heatmap has no discrete classes to swatch.
+    const stops=[0,.25,.5,.75,1].map(t=>`${ramp(t,0,1)} ${t*100}%`).join(',');
+    html+=`<div class="gradbar" style="background:linear-gradient(90deg,${stops})"></div>
+      <div class="gradends"><span>${mn.toFixed(metric==='edi'?2:1)} (lower)</span><span>${mx.toFixed(metric==='edi'?2:1)} (higher)</span></div>`;
+  }else{
+    const steps=4;
+    for(let i=0;i<steps;i++){
+      const v=mn+(mx-mn)*(i/(steps-1));
+      html+=`<div><i style="background:${ramp(v,mn,mx)}"></i>${v.toFixed(metric==='edi'?2:1)}${i===0?' (lower)':i===steps-1?' (higher)':''}</div>`;
+    }
   }
-  if(metric==='edi') html+=`<div style="margin-top:5px;font-size:11px;color:#5b6b7a">&gt;1 stay riskier · &lt;1 evacuate riskier</div>`;
+  if(metric==='edi') html+=`<div class="legnote">&gt;1 stay riskier · &lt;1 evacuate riskier</div>`;
+  if(mode!=='circles') html+=`<div class="legnote">Heat intensity = metric; overlapping crises reinforce. Dots are the data — click one.</div>`;
   el.innerHTML=html;
 }
 
 document.getElementById('metric').addEventListener('change',e=>draw(e.target.value));
+document.getElementById('display').addEventListener('change',e=>draw(document.getElementById('metric').value,e.target.value));
 draw('edi');
+
+// The header wraps to two lines on narrow viewports, so the space above the map
+// is not a constant. Measure it instead of assuming, or the map overflows the
+// viewport and the legend sits below the fold.
+function sizeMap(){
+  const nav=document.querySelector('nav');
+  if(!nav) return;
+  document.documentElement.style.setProperty('--maptop',Math.round(nav.getBoundingClientRect().bottom+window.scrollY)+'px');
+  map.invalidateSize();
+}
+sizeMap();
+window.addEventListener('resize',sizeMap);
+window.addEventListener('load',sizeMap);
 
 /* ---------- Data sources grid ---------- */
 const SOURCES=[
@@ -652,7 +740,15 @@ document.getElementById('srcgrid').innerHTML = SOURCES.map(s=>`
 const drawer=document.getElementById('drawer');
 function closeDetail(){ drawer.classList.remove('open'); }
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-function fmtDate(s){ if(!s) return ''; const d=new Date(s); return isNaN(d)?s:d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }
+// A bare YYYY-MM-DD parses as UTC midnight, which then renders as the PREVIOUS
+// day in every timezone behind UTC — silently misdating news by a day. Build
+// those as local dates; anything with a time component is left to Date().
+function fmtDate(s){
+  if(!s) return '';
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s).trim());
+  const d=m?new Date(+m[1],+m[2]-1,+m[3]):new Date(s);
+  return isNaN(d)?s:d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+}
 
 // NASA satellite snapshot for a location (server proxies the keyed Earth Imagery API).
 function nasaImgHTML(crisis,lat,lng){
@@ -662,6 +758,45 @@ function nasaImgHTML(crisis,lat,lng){
       onload="this.classList.add('on')" onerror="this.closest('.nasa-wrap').remove()">
     <div class="nasa-cap">Landsat via NASA Earth Imagery API · ~55 km across · ${lat.toFixed(2)}, ${lng.toFixed(2)}</div></div>` : '';
 }
+/* ---------- Road access / blockages (Tavily) ----------
+   Whether the roads out are usable decides an evacuation, and no open global
+   feed reports it for conflict zones — so this reads the news. Two limits are
+   stated in the UI rather than hidden: the status is keyword-derived from the
+   headline (a triage hint, not a verified fact), and news prose carries no
+   coordinates, so nothing here can be drawn as a route on the map. */
+const ROAD_STATUS={
+  blocked:   {label:'Blocked',    cls:'r-blocked',    icon:'⛔'},
+  damaged:   {label:'Damaged',    cls:'r-damaged',    icon:'🧱'},
+  checkpoint:{label:'Checkpoint', cls:'r-checkpoint', icon:'🚧'},
+  reopened:  {label:'Reopened',   cls:'r-reopened',   icon:'✅'}
+};
+const ROAD_ORDER=['blocked','damaged','checkpoint','reopened'];
+function roadsHTML(r){
+  if(!r) return '';
+  const items=r.items||[], counts=r.counts||{};
+  let h='<h4>🚧 Road access — reported blockages</h4>';
+  if(!items.length){
+    return h+`<p style="font-size:12.5px;color:#5b6b7a">No road-access reports found in
+      ${r.considered||0} recent items. <b>Absence of reports is not evidence roads are open</b> —
+      route closures in conflict zones are chronically under-reported.</p>`;
+  }
+  const pct=Math.round((r.signal||0)*100);
+  h+='<div class="road-sum">'+ROAD_ORDER.filter(s=>counts[s])
+      .map(s=>`<span class="rpill ${ROAD_STATUS[s].cls}">${ROAD_STATUS[s].icon} ${counts[s]} ${ROAD_STATUS[s].label.toLowerCase()}</span>`).join('')
+    +`<span class="rsignal" title="Weighted from the counts; feeds a feasibility penalty in the CERAI lens">Obstruction signal <b>${pct}%</b></span></div>`;
+  h+=`<div class="road-caveat">Status is inferred from headline wording, not verified — open the source before acting on it.
+      News reports carry no coordinates, so these cannot be drawn as routes on the map.</div>`;
+  items.forEach(it=>{
+    const st=ROAD_STATUS[it.status]||{label:it.status,cls:'',icon:'•'};
+    const amb=(it.tags||[]).length>1 ? `<span class="ramb" title="Matched both obstruction and reopening language">mixed signals</span>` : '';
+    h+=`<div class="news road"><span class="rpill ${st.cls}">${st.icon} ${st.label}</span>${amb}
+      <a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>
+      <div class="m">${esc(it.source||'')}${it.date?' · '+fmtDate(it.date):''}</div>
+      ${it.snippet?`<p>${esc(it.snippet)}…</p>`:''}</div>`;
+  });
+  return h;
+}
+
 function backendDownHTML(err){
   return `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;
 }
@@ -740,8 +875,23 @@ function ceraiScores(d, detail, weather){
     if(wind>40) wxPenalty=Math.max(wxPenalty,8);
     feas=clamp(feas-wxPenalty,0,100);
   }
+  // Reported road blockages cut feasibility — a route you cannot drive is the
+  // most literal form of infeasibility CERAI models. Capped at 12 points
+  // deliberately: the signal is keyword-derived from news, so it is allowed to
+  // shade the score, never to dominate the INFORM Complexity base.
+  const roadSignal=(detail&&detail.roads&&typeof detail.roads.signal==='number')?detail.roads.signal:null;
+  const roadPenalty=roadSignal==null?0:Math.round(roadSignal*12);
+  if(roadPenalty) feas=clamp(feas-roadPenalty,0,100);
   const gap = endanger>=75 && feas<=40;          // high danger + low feasibility
-  return {endanger,feas,band,traj,trajTxt,wxPenalty,gap};
+  return {endanger,feas,band,traj,trajTxt,wxPenalty,roadPenalty,roadSignal,gap};
+}
+// One line on how reported road access moved feasibility, including the case
+// where nothing was found — silence there is a gap in reporting, not an all-clear.
+function roadNote(s){
+  if(s.roadSignal==null) return 'Road access: not searched (no Tavily key, or road search skipped).';
+  if(!s.roadPenalty) return 'Road access: no blockage reports in the window — <b>not</b> evidence routes are open.';
+  return `Road access (Tavily news): obstruction signal <b>${Math.round(s.roadSignal*100)}%</b> — −${s.roadPenalty} pts feasibility.
+    <span class="cg-sub" style="display:inline">Keyword-derived from headlines, capped at 12 pts; see 🚧 Road access below.</span>`;
 }
 function ceraiGauge(label,sub,pct,kind,threshold,range){
   const band = range ? `<div class="cg-range" style="left:${clamp(range.lo,0,100)}%;width:${clamp(range.hi-range.lo,0,100)}%" title="Range across population vulnerability (0.7×–1.3×)"></div>` : '';
@@ -811,8 +961,9 @@ function ceraiBlockHTML(d, detail, weather){
     <div class="cerai-hd">🧭 <b>CERAI lens</b> — endangerment and feasibility, kept separate (never one score)</div>
     ${ceraiGauge('Endangerment — risk of staying', `INFORM Conditions + ACLED · band: <b>${band}</b> · range across population <b>${Math.round(eLo)}–${Math.round(eHi)}%</b>`, endanger, 'danger', 75, {lo:eLo,hi:eHi})}
     <div class="cerai-note">${traj}</div>
-    ${ceraiGauge('Feasibility — can people move', 'INFORM Complexity + live weather (geom. of route/exit/destination)', feas, 'feas', null)}
+    ${ceraiGauge('Feasibility — can people move', 'INFORM Complexity + live weather + reported road access (geom. of route/exit/destination)', feas, 'feas', null)}
     <div class="cerai-note">${wx}</div>
+    <div class="cerai-note">${roadNote(s)}</div>
     <div class="cerai-note">🛰 Damage assessment: <a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet imagery maps building/route damage for this AOI — raises endangerment (infrastructure loss) and lowers feasibility (blocked routes) once connected on the <b>Map</b> tab.
       <button type="button" class="detailbtn" style="width:auto;padding:6px 12px;margin:6px 0 0" onclick="inspectImagery(${d.lat},${d.lng})">🔍 Zoom high-res satellite imagery of ${esc(d.crisis)}</button></div>
     ${vuln}
@@ -857,6 +1008,8 @@ function buildDetailHTML(d,nasaHtml){
     });
     if(!(t.items||[]).length) h+='<p style="font-size:12.5px;color:#5b6b7a">No recent items returned.</p>';
   }
+  // ---- Road access / blockages ----
+  h+=roadsHTML(d.roads);
   // ---- ACLED structured timeline ----
   const a=d.acled;
   if(a && a.months && a.months.length){

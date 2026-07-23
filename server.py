@@ -7,7 +7,7 @@ Serves the static site AND a /api/detail endpoint that pulls, server-side:
 Keys are read from a gitignored .env file (or the environment).
 Stdlib only — no pip install needed.  Run:  python3 server.py
 """
-import json, os, time, hashlib, urllib.request, urllib.parse, http.server
+import json, os, re, time, hashlib, urllib.request, urllib.parse, http.server
 from datetime import datetime, timedelta
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -112,6 +112,71 @@ def tavily_news(key, query, days=60, max_results=10):
             "source": urllib.parse.urlparse(r.get("url", "")).netloc.replace("www.", ""),
         })
     return {"answer": out.get("answer"), "items": items}
+
+# ---- Road access / blockages -------------------------------------------
+# Whether the roads out are usable is the single most decisive input to
+# evacuation feasibility, and no open, global, structured road-closure feed
+# covers conflict zones — so this reads the news for it via Tavily.
+#
+# Two honest limits, surfaced in the UI rather than hidden:
+#   1. News prose carries NO geometry. There are no coordinates for "the
+#      Salah al-Din road is cut", so blockages are reported as a list and a
+#      feasibility signal, never drawn as lines on the map.
+#   2. The status below is keyword-derived from the headline and snippet, not
+#      verified. It is a triage hint that points at a source to read.
+ROAD_QUERY = ("road closures, blocked highways, destroyed bridges, checkpoints, "
+              "border crossing closures and impassable evacuation routes")
+# Word boundaries are load-bearing here: without them "closure" fires on
+# "disclosure", "mined" on "examined", and "passable" on "impassable" — which
+# would flip a blocked road to reopened.
+ROAD_PATTERNS = [
+    ("blocked",    r"\bblock(ed|ade|ades|ing|s)?\b|\bclos(ed|ure|ures|ing)\b|\bshut\b|"
+                   r"\bsealed\b|cut off|cut-off|impassab|inaccessib|besieg|siege|"
+                   r"encircl|\btrapped\b|no way out"),
+    ("damaged",    r"destroy|damag|collaps|\bbomb(ed|ing|s)?\b|\bshell(ed|ing)\b|"
+                   r"\bstruck\b|washed away|landslide|\bflood(ed|ing|s)?\b|"
+                   r"landmine|land mine|\bmined\b|\bcrater(s|ed)?\b"),
+    ("checkpoint", r"checkpoint|road ?block|barricade|\bpermit(s)?\b|screening|"
+                   r"turned back|denied passage"),
+    ("reopened",   r"reopen|re-open|restored|\bclear(ed|ing)\b|repair|resumed|"
+                   r"\bpassable\b|corridor open|humanitarian corridor"),
+]
+# Weight per status when turning counts into a 0–1 obstruction signal. Reopenings
+# genuinely offset blockages, so they subtract.
+ROAD_WEIGHTS = {"blocked": 1.0, "damaged": 0.8, "checkpoint": 0.5, "reopened": -0.5}
+ROAD_SATURATE = 5.0   # weighted score at which the signal reaches 1.0
+
+def classify_road(text):
+    """Return (primary_status, all_matched_tags) for one news item.
+
+    An item saying "the coast road reopened after weeks closed" matches both
+    directions, so every match is kept in `tags` and the caller can see the
+    ambiguity. `status` prefers the obstruction reading, because under-calling a
+    blocked route is the more dangerous error for an evacuation tool to make.
+    """
+    t = (text or "").lower()
+    tags = [name for name, pat in ROAD_PATTERNS if re.search(pat, t)]
+    for name in ("blocked", "damaged", "checkpoint", "reopened"):
+        if name in tags:
+            return name, tags
+    return "unclear", tags
+
+def tavily_roads(key, country, crisis, days=60, max_results=10):
+    """Road-access items for one crisis, classified and scored."""
+    news = tavily_news(key, f"{country} {crisis} {ROAD_QUERY}",
+                       days=days, max_results=max_results)
+    items, counts = [], {"blocked": 0, "damaged": 0, "checkpoint": 0, "reopened": 0}
+    for it in news["items"]:
+        status, tags = classify_road(f"{it.get('title','')} {it.get('snippet','')}")
+        if status == "unclear":
+            continue                       # no road language at all — drop the noise
+        counts[status] += 1
+        items.append(dict(it, status=status, tags=tags))
+    score = sum(ROAD_WEIGHTS[s] * n for s, n in counts.items())
+    signal = max(0.0, min(1.0, score / ROAD_SATURATE))
+    return {"answer": news.get("answer"), "items": items, "counts": counts,
+            "signal": round(signal, 3), "considered": len(news["items"]),
+            "query_days": days}
 
 # ACLED migrated to OAuth2 in 2025: log in with email+password -> Bearer token
 # (valid 24h) -> query https://acleddata.com/api/acled/read. The legacy
@@ -291,8 +356,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_json({
             "total": usage_read(),          # cumulative across all runs (persisted)
             "session": SESSION_USAGE,        # since this server process started
-            "note": "Tavily basic search = 1 API credit. Cached results (≤6h) cost 0. "
-                    "Check your monthly credit limit at app.tavily.com.",
+            "note": "Tavily basic search = 1 API credit. A detail call spends 2 "
+                    "(news + road access); add ?roads=0 to spend 1. Cached results "
+                    "(≤6h) cost 0. Check your monthly limit at app.tavily.com.",
         })
 
     def api_detail(self):
@@ -307,14 +373,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         tk = env.get("TAVILY_API_KEY")
         ae, ap = env.get("ACLED_EMAIL"), env.get("ACLED_PASSWORD")
         nocache = "nocache" in q
-        ckey = f"{crisis}|{country}|d{days}|t{bool(tk)}|a{bool(ae and ap)}"
+        # Road access is a second Tavily search, so it doubles the credit cost
+        # of a detail call. On by default (it is the point of the feature);
+        # pass ?roads=0 to skip it when conserving credits.
+        want_roads = (q.get("roads") or ["1"])[0] not in ("0", "false", "no")
+        ckey = f"{crisis}|{country}|d{days}|t{bool(tk)}|a{bool(ae and ap)}|r{int(want_roads)}"
         if not nocache:
             hit = cache_get(ckey)
             if hit:
                 hit["cached"] = True
                 return self.send_json(hit)
         resp = {"crisis": crisis, "country": country, "cached": False, "days": days,
-                "tavily": None, "acled": None, "errors": [], "keys": {}}
+                "tavily": None, "acled": None, "roads": None, "errors": [], "keys": {}}
         resp["keys"]["tavily"] = bool(tk)
         if tk:
             try:
@@ -324,6 +394,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 usage_bump("tavily")  # a real search credit was spent
             except Exception as e:
                 resp["errors"].append(f"tavily: {e}")
+            if want_roads:
+                try:
+                    resp["roads"] = tavily_roads(tk, country, crisis, days=days)
+                    usage_bump("tavily")   # second search = second credit
+                except Exception as e:
+                    resp["errors"].append(f"roads: {e}")
         else:
             resp["errors"].append("no_tavily_key")
         resp["keys"]["acled"] = bool(ae and ap)
@@ -335,7 +411,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 resp["errors"].append(f"acled: {e}")
         else:
             resp["errors"].append("no_acled_key")
-        if resp.get("tavily") or resp.get("acled"):
+        if resp.get("tavily") or resp.get("acled") or resp.get("roads"):
             cache_set(ckey, resp)  # only cache real data
         self.send_json(resp)
 

@@ -10,11 +10,13 @@ If you only read one section, read [At a glance](#at-a-glance) and
 
 ## At a glance
 
-Nine external services, plus one dataset that is baked in rather than fetched.
+Nine external services (Tavily is called twice, for news and for road access),
+plus one dataset that is baked in rather than fetched.
 
 | Service | What it provides | Auth | Called from | Cost |
 |---|---|---|---|---|
 | Tavily Search | Recent news per crisis | API key | Server | 1 credit per search |
+| Tavily Search (roads) | Reported road blockages per crisis | API key | Server | 1 credit per search |
 | ACLED | Dated conflict events and fatalities | OAuth2 password grant | Server | Free tier |
 | NASA Earth Imagery | Landsat snapshot for one point | API key | Server | Free |
 | Open-Meteo | Route weather and daylight | None | Browser | Free |
@@ -102,6 +104,45 @@ characters, and the source domain. Nothing else is stored.
 Tavily bills per search, not per token, so one uncached crisis click costs one
 credit. This is the only integration that costs money as you browse, which is
 why usage tracking exists at all. Watch your balance at `app.tavily.com`.
+
+### 1b. Tavily Search, road access
+
+A second search against the same endpoint, asking specifically about road
+closures, destroyed bridges, checkpoints, border-crossing closures and
+impassable evacuation routes. It exists because whether the roads out are
+usable is the most decisive input to evacuation feasibility, and no open,
+global, structured road-closure feed covers conflict zones.
+
+Each returned item is classified by regex over its title and snippet into one
+of four statuses, and anything matching none of them is dropped:
+
+| Status | Weight | Matches on |
+|---|---|---|
+| `blocked` | +1.0 | blocked, closed, sealed, cut off, impassable, besieged, trapped |
+| `damaged` | +0.8 | destroyed, damaged, collapsed, bombed, shelled, landslide, landmines |
+| `checkpoint` | +0.5 | checkpoint, roadblock, barricade, permits, turned back |
+| `reopened` | −0.5 | reopened, restored, cleared, repaired, passable, humanitarian corridor |
+
+The weighted counts divided by a saturation constant of 5 give a `signal`
+between 0 and 1, which the CERAI lens turns into a feasibility penalty capped
+at 12 points. The cap is deliberate: a keyword heuristic over news prose is
+allowed to shade the score, never to overwhelm the INFORM Complexity base.
+
+Three limits are stated in the UI rather than hidden:
+
+- **No geometry.** News prose carries no coordinates, so a blocked road cannot
+  be drawn as a route on the map. Blockages are a list and a score, not a layer.
+- **Not verified.** The status is inferred from wording. An item saying a road
+  "reopened after weeks closed" matches both directions; every match is kept in
+  `tags` and flagged as *mixed signals* in the UI, and `status` resolves toward
+  the obstruction reading, because under-calling a blocked route is the more
+  dangerous error for an evacuation tool to make.
+- **Silence is not an all-clear.** Zero reports says the window contained no
+  road coverage, not that the roads are open. Closures in conflict zones are
+  chronically under-reported.
+
+Because this is a second search, a detail call costs **2 Tavily credits**. Pass
+`?roads=0` to skip it, or run `snapshot.py --no-roads`.
 
 ### 2. ACLED, the conflict timeline
 
@@ -269,6 +310,7 @@ The main one. Returns news and conflict timeline for a single crisis.
 | `crisis` | Crisis name, matching `data.js` |
 | `country` | Country name, matching `data.js` |
 | `days` | Lookback window, clamped to between 1 and 365 |
+| `roads` | `0` to skip the road-access search and spend 1 credit instead of 2 |
 | `nocache` | Present to force a live fetch and bypass the cache |
 
 The response always includes a `keys` object saying which credentials were
