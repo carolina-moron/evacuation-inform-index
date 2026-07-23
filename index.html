@@ -739,7 +739,17 @@ document.getElementById('srcgrid').innerHTML = SOURCES.map(s=>`
 /* ---------- Detail drawer: live Tavily news + ACLED timeline ---------- */
 const drawer=document.getElementById('drawer');
 function closeDetail(){ drawer.classList.remove('open'); }
-function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// Only http(s) URLs may reach an href — blocks javascript:/data:/vbscript: and
+// anything else the (third-party, attacker-influenceable) news feed can supply.
+function safeUrl(u){
+  const s=String(u==null?'':u).trim();
+  if(!s) return '#';
+  try{
+    const p=new URL(s, document.baseURI);
+    return (p.protocol==='http:'||p.protocol==='https:') ? p.href : '#';
+  }catch(e){ return '#'; }
+}
 // A bare YYYY-MM-DD parses as UTC midnight, which then renders as the PREVIOUS
 // day in every timezone behind UTC — silently misdating news by a day. Build
 // those as local dates; anything with a time component is left to Date().
@@ -790,7 +800,7 @@ function roadsHTML(r){
     const st=ROAD_STATUS[it.status]||{label:it.status,cls:'',icon:'•'};
     const amb=(it.tags||[]).length>1 ? `<span class="ramb" title="Matched both obstruction and reopening language">mixed signals</span>` : '';
     h+=`<div class="news road"><span class="rpill ${st.cls}">${st.icon} ${st.label}</span>${amb}
-      <a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>
+      <a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a>
       <div class="m">${esc(it.source||'')}${it.date?' · '+fmtDate(it.date):''}</div>
       ${it.snippet?`<p>${esc(it.snippet)}…</p>`:''}</div>`;
   });
@@ -1002,7 +1012,7 @@ function buildDetailHTML(d,nasaHtml){
     h+='<h4>🟢 Live developments — Tavily</h4>';
     if(t.answer) h+=`<div class="ans">${esc(t.answer)}</div>`;
     (t.items||[]).forEach(it=>{
-      h+=`<div class="news"><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>
+      h+=`<div class="news"><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a>
         <div class="m">${esc(it.source||'')}${it.date?' · '+fmtDate(it.date):''}</div>
         ${it.snippet?`<p>${esc(it.snippet)}…</p>`:''}</div>`;
     });
@@ -1051,7 +1061,7 @@ function buildDetailHTML(d,nasaHtml){
         const dd=new Date(it.date);
         const key=dd.toLocaleDateString(undefined,{year:'numeric',month:'long'});
         if(key!==curKey){ curKey=key; h+=`<li class="tl-group"><span class="g">${key}</span></li>`; }
-        h+=`<li><div class="d">${fmtDate(it.date)} · ${esc(it.source||'')}</div><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a></li>`;
+        h+=`<li><div class="d">${fmtDate(it.date)} · ${esc(it.source||'')}</div><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a></li>`;
       });
       h+='</ul>';
     }

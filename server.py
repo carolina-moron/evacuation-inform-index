@@ -7,7 +7,7 @@ Serves the static site AND a /api/detail endpoint that pulls, server-side:
 Keys are read from a gitignored .env file (or the environment).
 Stdlib only — no pip install needed.  Run:  python3 server.py
 """
-import json, os, re, time, hashlib, urllib.request, urllib.parse, http.server
+import json, os, re, time, hashlib, hmac, threading, urllib.request, urllib.parse, http.server
 from datetime import datetime, timedelta
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -86,6 +86,47 @@ def load_env():
         if os.environ.get(k):
             env[k] = os.environ[k]
     return env
+
+# ---- Local-security config (env-overridable, safe defaults) -------------
+# /api/detail spends real Tavily credits, so the API is treated as private:
+# loopback-only bind, an origin allowlist instead of wildcard CORS, per-IP
+# rate limiting, and *optional* token auth (off unless EII_API_TOKEN is set,
+# so an unset variable never locks out normal local use).
+_ENV_FILE = load_env()
+
+def _cfg(name, default=""):
+    v = os.environ.get(name)
+    if v is None:
+        v = _ENV_FILE.get(name)
+    return (v if v is not None else default).strip()
+
+HOST = _cfg("HOST", "127.0.0.1")
+ALLOWED_ORIGINS = {o.strip() for o in _cfg(
+    "ALLOWED_ORIGINS",
+    f"http://localhost:{PORT},http://127.0.0.1:{PORT}").split(",") if o.strip()}
+API_TOKEN = _cfg("EII_API_TOKEN", "")          # empty = auth disabled
+try:
+    RATE_LIMIT = int(_cfg("RATE_LIMIT_PER_MIN", "30") or 30)  # 0 = unlimited
+except ValueError:
+    RATE_LIMIT = 30
+
+_RATE, _RATE_LOCK = {}, threading.Lock()
+
+def rate_ok(ip):
+    """Sliding 60s window, per client IP. Cheap and stdlib-only."""
+    if RATE_LIMIT <= 0:
+        return True
+    now = time.time()
+    with _RATE_LOCK:
+        hits = [t for t in _RATE.get(ip, []) if now - t < 60]
+        allowed = len(hits) < RATE_LIMIT
+        if allowed:
+            hits.append(now)
+        _RATE[ip] = hits
+        if len(_RATE) > 512:  # bound memory
+            for k in [k for k, v in _RATE.items() if not v or now - v[-1] > 300]:
+                _RATE.pop(k, None)
+    return allowed
 
 def http_json(url, data=None, headers=None, method="GET"):
     body = json.dumps(data).encode() if data is not None else None
@@ -286,16 +327,49 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a):
         pass  # quiet
 
+    def send_cors(self):
+        """Echo the request Origin only when it is on the allowlist (no '*')."""
+        o = self.headers.get("Origin")
+        self.send_header("Vary", "Origin")
+        if o and o in ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", o)
+
     def send_json(self, obj, code=200):
         b = json.dumps(obj).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_cors()
         self.send_header("Content-Length", str(len(b)))
         self.end_headers()
         self.wfile.write(b)
 
+    def api_guard(self):
+        """Gate every /api/* call. Returns True to proceed, else already replied."""
+        origin = self.headers.get("Origin")
+        if origin and origin not in ALLOWED_ORIGINS:
+            self.send_json({"error": "origin_not_allowed"}, 403)
+            return False
+        # Drive-by CSRF (e.g. <img src="http://localhost:8000/api/detail?...">
+        # on a page the user visits) arrives with Sec-Fetch-Site: cross-site.
+        # Same-origin XHR/fetch and address-bar navigations ("none") pass, as do
+        # non-browser clients that send no such header (curl, snapshot.py).
+        if self.headers.get("Sec-Fetch-Site") in ("cross-site", "same-site"):
+            self.send_json({"error": "cross_site_blocked"}, 403)
+            return False
+        if API_TOKEN:  # opt-in hard auth
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            tok = self.headers.get("X-API-Token") or (q.get("token") or [""])[0]
+            if not hmac.compare_digest(tok, API_TOKEN):
+                self.send_json({"error": "unauthorized"}, 401)
+                return False
+        if not rate_ok(self.client_address[0]):
+            self.send_json({"error": "rate_limited"}, 429)
+            return False
+        return True
+
     def do_GET(self):
+        if self.path.startswith("/api/") and not self.api_guard():
+            return
         if self.path.startswith("/api/detail"):
             return self.api_detail()
         if self.path.startswith("/api/earth-image"):
@@ -346,7 +420,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "image/png")
         self.send_header("Cache-Control", "public, max-age=604800")
-        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_cors()
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
@@ -416,6 +490,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_json(resp)
 
 if __name__ == "__main__":
-    httpd = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"EII backend on http://localhost:{PORT}  (LAN + /api/detail live)")
+    httpd = http.server.ThreadingHTTPServer((HOST, PORT), Handler)
+    print(f"EII backend on http://{HOST}:{PORT}  (/api/detail live)")
+    print(f"  bind: HOST={HOST} (set HOST=0.0.0.0 to expose on the LAN — spends API credits)")
+    print(f"  cors: {', '.join(sorted(ALLOWED_ORIGINS)) or '(none)'}")
+    print(f"  rate: {RATE_LIMIT}/min per IP · auth: {'on (EII_API_TOKEN)' if API_TOKEN else 'off'}")
     httpd.serve_forever()
