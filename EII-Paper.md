@@ -231,7 +231,7 @@ The distinction matters. A demographic list alone would treat vulnerability as a
 
 ## 6. What a User Sees
 
-6.1 The map presents all 104 crises as markers scaled and coloured by whichever measure the user selects: the ratio itself, the risk of staying, or the risk of evacuating. Selecting a crisis opens a panel with the full breakdown.
+6.1 The map presents all 104 crises as markers, and colour and size carry different variables. A marker is coloured by whichever measure the user selects: the ratio itself, the risk of staying, or the risk of evacuating. A marker is sized by the crisis's INFORM Severity class, on a fixed scale of one to five rather than the range present in the data, so that filtering the view never silently re-scales the dots. The two channels are therefore readable independently, and a severity five crisis draws large whether its ratio says stay or evacuate. Where several crises share a point the marker takes the highest severity among them, which is the rule the colour already followed. A crisis carrying no severity class draws at the smallest size and says so in its panel rather than being interpolated into a class it does not have. The legend carries a key for size as well as for colour. Selecting a crisis opens a panel with the full breakdown.
 
 6.2 The live panel provides, for each crisis, recent developments retrieved from news sources and a structured conflict timeline from ACLED, with every item linked to its primary source. The time window is adjustable from thirty days to twelve months.
 
