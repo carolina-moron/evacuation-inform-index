@@ -268,6 +268,7 @@
     display:flex;align-items:center;justify-content:center;border:1.5px solid #fff}
   .roadpop h4{margin:0 0 4px;font-size:13.5px;color:var(--navy)}
   .roadpop .where{font-size:11px;color:var(--muted);margin:0 0 7px}
+  .roadpop .scopechip{margin:2px 0 6px}
   .roadpop .scroll{max-height:240px;overflow-y:auto;margin-top:8px}
   .roadpop .news.road{margin-bottom:7px}
   .roadpop .news.road:last-child{margin-bottom:0}
@@ -1513,6 +1514,13 @@ function roadsHTML(r){
    this crisis" — never "the blockage is here". The popup says so rather than
    letting the reader assume a precision the source does not have.
 
+   The pin coordinates come from geo.js by way of build_roads_layer.py, the same
+   curated source the crisis markers use, so a road pin and the crisis it
+   describes always land on the same point. They did not always: while the layer
+   read the coordinates cached in snapshot/index.json it drew the pre-geo.js
+   country centroids, putting the Mindanao pin in the sea off Luzon and the
+   Lebanon pin inside Syria.
+
    The coverage note matters as much as the pins. The road search has run for
    42 of 104 crises; the other 62 have never been looked at. An unpinned crisis
    is therefore ambiguous, and on a map about whether people can get out, the
@@ -1526,8 +1534,11 @@ function roadPinPopup(c){
     .join('');
   const pct=Math.round((c.signal||0)*100);
   let h=`<div class="roadpop"><h4>🚧 ${esc(c.crisis||c.country||'')}</h4>
+    ${scopeChip(c)}
     <p class="where">${esc(c.country||'')} · pinned at the crisis location, not at the blockage —
-      news reports carry no coordinates.</p>
+      news reports carry no coordinates.${c.scope==='country'
+        ? ' The crisis itself is only located to the country, so the pin stands in for all of it.'
+        : ''}</p>
     <div class="road-sum">${pills}
       <span class="rsignal">Obstruction signal <b>${pct}%</b></span></div>
     <div class="road-caveat">Status is inferred from headline wording over the last
@@ -1567,7 +1578,10 @@ function buildRoadPins(d){
       <div class="legnote">${d.with_reports} of ${d.total} crises carry road-access reports.</div>
       <div class="legnote"><b>${d.unsearched} have never been searched</b> — no pin means
         no report, which is <i>not</i> evidence the roads are open.</div>
-      <div class="legnote">Pins mark the crisis, not the blockage.</div>`;
+      ${d.unlocated ? `<div class="legnote"><b>${d.unlocated} carry reports but have no curated
+        location</b> and are not drawn at all.</div>` : ''}
+      <div class="legnote">Pins mark the crisis, not the blockage — and where the crisis is
+        located only to the country, the pin stands in for the whole country.</div>`;
     return el;
   };
   roadPinLayer.on('add',()=>note.addTo(map));
