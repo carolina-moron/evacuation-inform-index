@@ -66,6 +66,20 @@
   .loc-coord{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
   .loc-warn{font-size:11.5px;line-height:1.5;color:#7a561b;background:#fdf4e6;border-radius:5px;padding:6px 8px;margin-top:8px}
   .multi{font-size:11.5px;font-weight:700;color:var(--navy);background:#eef1f6;border-radius:5px;padding:4px 7px;margin-bottom:6px}
+  /* Crisis-type filter */
+  .typef{display:flex;flex-direction:column;gap:3px;margin-bottom:5px}
+  .typef label{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--ink);
+    text-transform:none;letter-spacing:0;font-weight:500;cursor:pointer;margin:0;padding:3px 5px;
+    border-radius:5px;line-height:1.35}
+  .typef label:hover{background:#f2f5f8}
+  .typef input{margin:1px 0 0;flex:0 0 auto;accent-color:var(--navy2)}
+  .typef .tf-n{margin-left:auto;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;
+    padding-left:6px}
+  .typef .tf-sub{display:block;font-size:10.5px;color:var(--muted);line-height:1.35}
+  .typef-act{display:flex;align-items:center;gap:10px;font-size:11px;margin-bottom:8px}
+  .typef-act .linkish{font-size:11px}
+  .typef-count{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+  .typef-count.none{color:#a5342a;font-weight:600}
   hr.lpsep{border:0;border-top:1px dashed #ccd4de;margin:12px 0}
   /* CONTENT PANELS */
   .doc{max-width:1000px;margin:0 auto;padding:26px 22px 60px}
@@ -120,6 +134,41 @@
   .fignote{font-size:11.5px;color:var(--muted);margin:8px 0 0;line-height:1.55}
   .fighl{font-size:13px;color:var(--ink);margin:12px 0 0;padding:10px 13px;background:#f7f5fc;
     border-left:3px solid var(--navy2);border-radius:0 6px 6px 0;line-height:1.6}
+  /* --- Clickable legal citations + their explainer panel --- */
+  .lawref{background:#f5f1fc;border:0;border-bottom:1px dotted var(--navy2);border-radius:3px;
+    padding:0 3px;margin:0;font:inherit;font-weight:600;color:var(--navy2);cursor:pointer;
+    white-space:nowrap}
+  .lawref:hover,.lawref:focus{background:#e9e0fa;outline:none}
+  .lawref::after{content:"\00a0?";font-size:.78em;vertical-align:super;opacity:.7}
+  #lawOverlay{position:fixed;inset:0;background:rgba(11,37,69,.45);z-index:1200}
+  #lawModal{position:fixed;z-index:1201;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(680px,calc(100vw - 32px));max-height:min(82vh,760px);display:flex;flex-direction:column;
+    background:var(--card);border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.32);overflow:hidden}
+  #lawModal[hidden],#lawOverlay[hidden]{display:none}
+  .lawhd{background:var(--navy);color:#fff;padding:16px 46px 14px 20px;position:relative}
+  .lawhd h3{margin:2px 0 0;font-size:18px;line-height:1.3}
+  .lawhd .x{position:absolute;top:10px;right:12px;background:none;border:0;color:#fff;font-size:26px;
+    line-height:1;cursor:pointer;opacity:.85;padding:2px 6px}
+  .lawhd .x:hover{opacity:1}
+  .lawkicker{font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.75}
+  .lawmeta{font-size:12px;opacity:.85;margin-top:6px}
+  .lawbody{padding:16px 20px 20px;overflow-y:auto}
+  .lawsec{margin:0 0 16px}
+  .lawsec:last-child{margin-bottom:0}
+  .lawsec h4{margin:0 0 5px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--navy2)}
+  .lawsec p{margin:0;font-size:14px;line-height:1.62;color:var(--ink)}
+  .lawsec.verdict{background:#fdf4e6;border-left:3px solid #d09a3c;border-radius:0 6px 6px 0;padding:11px 14px}
+  .lawsec.verdict h4{color:#7a561b}
+  .lawquote{background:#f7f9fb;border-left:3px solid var(--line);border-radius:0 6px 6px 0;
+    padding:10px 14px;font-size:13.5px;line-height:1.6;color:#41505f;font-style:italic}
+  .lawsrc{font-size:12.5px}
+  /* Browsable index of every citation, for readers who would rather not hunt. */
+  .lawgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:10px;margin:12px 0 0}
+  .lawcard{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:8px;
+    padding:10px 12px;cursor:pointer;font:inherit;transition:border-color .12s,box-shadow .12s}
+  .lawcard:hover,.lawcard:focus{border-color:var(--navy2);box-shadow:0 2px 8px rgba(0,0,0,.07);outline:none}
+  .lawcard b{display:block;font-size:13px;color:var(--navy);margin-bottom:3px}
+  .lawcard span{font-size:11.5px;color:var(--muted);line-height:1.45;display:block}
 @keyframes flashHi{0%,20%{background:#fff3cd;border-radius:6px}100%{background:transparent}}
 .snapnote{background:#eef3fa;border:1px solid #cfe0f2;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.5;color:var(--navy);margin:0 0 12px}
 .sec-sep{border:0;border-top:2px solid var(--line);margin:34px 0 6px}
@@ -281,6 +330,11 @@
         <option value="circles">Graduated circles</option>
         <option value="both">Heatmap + circles</option>
       </select>
+      <label for="typeFilter" id="typeFilterLbl">Crisis type</label>
+      <div class="typef" id="typeFilter"></div>
+      <div class="typef-act"><button type="button" class="linkish" id="typeAll">All</button>
+        <button type="button" class="linkish" id="typeNone">None</button>
+        <span class="typef-count" id="typeCount"></span></div>
       <div class="note"><b>Real data.</b> RSS = INFORM <i>Conditions of people affected</i>; RSE = INFORM <i>Complexity</i> (access, safety, operating environment), each rescaled 1→5. Click any crisis dot for the full breakdown.</div>
       <div class="note"><b>Reading the heatmap.</b> Intensity is the selected metric, and overlapping crises reinforce each other. The smooth field between dots is a rendering effect, <i>not</i> a measurement — EII scores discrete crises, so only the dots carry data.</div>
       <div class="note" id="geonote"><b>What a dot means.</b> INFORM publishes no coordinates, so each crisis is placed by hand and labelled with what the point represents: <span class="scopechip sc-inline sc-sub">a named sub-national area</span> <span class="scopechip sc-inline sc-recept">a reception / hosting area</span> or <span class="scopechip sc-inline sc-country">a whole-country stand-in</span>. Country-scope dots sit at the population-weighted centroid, not the geographic centre — they mark a country, not a place. Sources are in <code>geo/locations.csv</code>.</div>
@@ -776,6 +830,20 @@
       <li><b>No prevalence, therefore no caseload.</b> The profile answers "how would this scenario shift the score", never "how many people in this crisis are in it". Planning figures exist and could be used — WHO estimates ~<b>16%</b> of the global population lives with significant disability, and inter-agency reproductive-health (MISP) planning commonly assumes ~<b>4%</b> of a crisis-affected population is pregnant at any time — the index carries neither. Without prevalence the multiplier describes a <i>hypothetical person</i>, not the population the crisis score is about.</li>
       <li><b>The legal basis is cited but not operative.</b> The protection-based groups were added because each has a footing in law — <b>AP I Art. 8(a)</b> classes maternity cases, newborns, the infirm and expectant mothers as "wounded and sick"; <b>customary IHL Rule 138</b> entitles the elderly, disabled and infirm to special respect and protection (Rules 134–135 for women and children); <b>CRPD Art. 11</b> covers persons with disabilities in situations of risk. None of this changes the arithmetic. A strong legal footing has <i>not</i> produced a strong weight, and should not be read as having done so.</li>
     </ul>
+
+    <hr class="sec-sep">
+    <h2 id="legal-index">The law this index cites — in plain language</h2>
+    <p class="lead">This page rests on <b id="lawCount">13</b> legal provisions, cited
+    <b id="lawHits">22</b> times between them. Every citation above is clickable — the dotted
+    underline marks them — and each opens the same explainer. No legal training is assumed.</p>
+    <div class="note-box"><b>Read the third section of each panel first.</b> Alongside what a
+    provision says and why this index cites it, every entry states <b>how far that citation is
+    justified</b> — because a legal reference that is only ever displayed can read as authority the
+    model has not earned. The short version: <b>none of these provisions changes a single number
+    the index computes.</b> They explain why the tool is shaped the way it is, and the strongest of
+    them (<b>ICCPR Art. 12</b>) exists here to constrain how the output may be used, not to
+    license it.</div>
+    <div class="lawgrid" id="lawGrid"></div>
   </div>
 </section>
 
@@ -818,6 +886,22 @@
 </section>
 
 </main>
+
+<!-- ===================== LEGAL REFERENCE MODAL =====================
+     Every legal citation in the Methodology tab is clickable. The panel answers
+     three questions in plain language: what the provision actually says, why
+     this index invokes it, and how far that invocation is justified — the last
+     being the one a reader most needs and most rarely gets. -->
+<div id="lawOverlay" hidden></div>
+<div id="lawModal" role="dialog" aria-modal="true" aria-labelledby="lawTitle" hidden>
+  <div class="lawhd">
+    <button class="x" onclick="closeLaw()" aria-label="Close">&times;</button>
+    <div class="lawkicker" id="lawKicker"></div>
+    <h3 id="lawTitle">—</h3>
+    <div class="lawmeta" id="lawMeta"></div>
+  </div>
+  <div class="lawbody" id="lawBody"></div>
+</div>
 
 <!-- ===================== DRAWER: live developments + timeline ===================== -->
 <aside id="drawer">
@@ -1034,6 +1118,90 @@ const LABELS={edi:"EII (evacuate ÷ stay)", rss:"Risk of Staying", rse:"Risk of 
 
 function metricVal(d,m){ return m==="edi"?edi(d):d[m]; }
 
+/* ---------- Crisis-type filter ----------
+   INFORM's driver list is truncated at 60 characters in the export, so the raw
+   strings arrive cut mid-word: "Political/econom", "Drought/", "Internat",
+   "Cyc". Matching on a prefix recovers the intended driver — the same
+   normalisation the Sense-2 methodology figure counts with, which is why the
+   totals here agree with it (50 / 39 / 25 / 22 / 18 / 9 / 1).
+
+   Crises routinely carry several drivers, so these groups overlap and their
+   counts sum to more than 104. A crisis is shown when ANY of its drivers is in
+   a ticked group — filtering is about "does this crisis involve X", not "is
+   this crisis only X". */
+const DRIVER_CANON=[
+  ['Conflict',  'Conflict / Violence'],
+  ['Internat',  'International Displacement'],
+  ['Floods',    'Floods'],
+  ['Drought',   'Drought / drier conditions'],
+  ['Political', 'Political / economic crisis'],
+  ['Cyc',       'Cyclone'],
+  ['Earthquake','Earthquake'],
+];
+const TYPE_GROUPS=[
+  {key:'environmental', label:'Environmental',      sub:'Floods · drought · cyclone · earthquake',
+   drivers:['Floods','Drought / drier conditions','Cyclone','Earthquake']},
+  {key:'conflict',      label:'Conflict & violence', sub:'Armed conflict, violence against civilians',
+   drivers:['Conflict / Violence']},
+  {key:'displacement',  label:'Displacement',        sub:'People arriving from, or leaving to, another country',
+   drivers:['International Displacement']},
+  {key:'political',     label:'Political & economic', sub:'Governance collapse, economic crisis',
+   drivers:['Political / economic crisis']},
+];
+function crisisDrivers(d){
+  const out=new Set();
+  (d.drivers||'').split(',').forEach(raw=>{
+    const t=raw.trim();
+    for(const [prefix,name] of DRIVER_CANON){ if(t.startsWith(prefix)){ out.add(name); return; } }
+  });
+  return out;
+}
+// Precomputed once: which groups each crisis belongs to.
+LOCS.forEach(d=>{
+  const names=crisisDrivers(d);
+  d.driverNames=[...names];
+  d.typeGroups=TYPE_GROUPS.filter(g=>g.drivers.some(n=>names.has(n))).map(g=>g.key);
+});
+// Every one of the 104 crises lands in at least one group, so ticking all four
+// is equivalent to no filter at all — nothing is hidden by default.
+const typeState=new Set(TYPE_GROUPS.map(g=>g.key));   // all on by default
+function passesType(d){ return d.typeGroups.some(k=>typeState.has(k)); }
+function visibleLocs(){ return LOCS.filter(passesType); }
+
+function buildTypeFilter(){
+  const host=document.getElementById('typeFilter');
+  if(!host) return;
+  host.innerHTML=TYPE_GROUPS.map(g=>{
+    const n=LOCS.filter(d=>d.typeGroups.includes(g.key)).length;
+    return `<label><input type="checkbox" data-tk="${g.key}" ${typeState.has(g.key)?'checked':''}>
+      <span>${g.label}<span class="tf-sub">${g.sub}</span></span>
+      <span class="tf-n">${n}</span></label>`;
+  }).join('');
+  host.querySelectorAll('input[data-tk]').forEach(cb=>cb.addEventListener('change',()=>{
+    cb.checked?typeState.add(cb.dataset.tk):typeState.delete(cb.dataset.tk);
+    draw(document.getElementById('metric').value);
+  }));
+}
+function syncTypeUI(){
+  document.querySelectorAll('#typeFilter input[data-tk]').forEach(cb=>{
+    cb.checked=typeState.has(cb.dataset.tk);
+  });
+  const el=document.getElementById('typeCount');
+  if(!el) return;
+  const n=visibleLocs().length;
+  el.textContent=`${n} of ${LOCS.length} crises`;
+  el.classList.toggle('none',n===0);
+}
+document.getElementById('typeAll').addEventListener('click',()=>{
+  TYPE_GROUPS.forEach(g=>typeState.add(g.key));
+  draw(document.getElementById('metric').value);
+});
+document.getElementById('typeNone').addEventListener('click',()=>{
+  typeState.clear();
+  draw(document.getElementById('metric').value);
+});
+buildTypeFilter();
+
 /* One crisis's card inside a popup. Several country-scope crises legitimately
    share a point (Iran hosts two, Ecuador three), so a popup may carry more than
    one of these — stacking them beats letting the top marker hide the rest. */
@@ -1054,7 +1222,7 @@ function popupCard(d,idx,metric){
       <tr><td>INFORM Severity (1&ndash;10)</td><td>${d.informIdx}</td></tr>
       <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
     </table>
-    <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${esc(d.drivers||'—')}</p>
+    <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${esc(d.driverNames.join(' · ')||'—')}</p>
     <button type="button" class="detailbtn" onclick="inspectImagery(${d.lat},${d.lng})">🔍 Zoom high-res satellite imagery</button>
     <button type="button" class="detailbtn" onclick="goLive(${idx})">📈 Live updates &amp; conflict timeline →</button></div>`;
 }
@@ -1070,7 +1238,10 @@ function draw(metric,mode){
   // which moved markers ~100 km to solve a rendering problem. One marker per
   // location, listing everything there, is the honest version of that fix.
   const groups=new Map();
+  // Index against LOCS, not the filtered list, so goLive(idx) still resolves
+  // to the right crisis when a filter is active.
   LOCS.forEach((d,idx)=>{
+    if(!passesType(d)) return;
     const key=`${d.lat},${d.lng}`;
     if(!groups.has(key)) groups.set(key,[]);
     groups.get(key).push({d,idx});
@@ -1104,6 +1275,7 @@ function draw(metric,mode){
   if(showHeat){ if(!map.hasLayer(heatLayer)) heatLayer.addTo(map); }
   else if(map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
   drawLegend(metric,mode);
+  syncTypeUI();
 }
 
 function drawLegend(metric,mode){
@@ -1123,6 +1295,13 @@ function drawLegend(metric,mode){
     }
   }
   if(metric==='edi') html+=`<div class="legnote">&gt;1 stay riskier · &lt;1 evacuate riskier</div>`;
+  // A filtered map that does not say it is filtered is a map that lies by omission.
+  const shown=visibleLocs().length;
+  if(shown<LOCS.length){
+    const on=TYPE_GROUPS.filter(g=>typeState.has(g.key)).map(g=>g.label);
+    html+=`<div class="legnote"><b>Filtered:</b> ${shown} of ${LOCS.length} crises`
+      +(on.length?` — ${esc(on.join(', '))}`:' — no crisis type selected')+`</div>`;
+  }
   if(mode!=='circles') html+=`<div class="legnote">Heat intensity = metric; overlapping crises reinforce. Dots are the data — click one.</div>`;
   el.innerHTML=html;
 }
@@ -1606,6 +1785,273 @@ function goLive(idx){
   liveSel.value=idx;
   loadLive(idx);
 }
+
+/* ================== LEGAL CITATIONS, EXPLAINED ==================
+   The Methodology tab cites thirteen legal provisions and, until now, assumed
+   the reader knew what they were. Each is written up here for someone with no
+   legal training, in three parts:
+
+     says       what the provision actually requires, in plain words
+     why        why THIS index invokes it
+     justified  how far that invocation holds up — including where it does not
+
+   The third part is the point. A citation that is only ever displayed reads as
+   authority the model has not earned; the honest version says which citations
+   carry weight in the arithmetic (none of them do) and which are decorative.
+   `quote` is the operative language, lightly trimmed, so a reader can check the
+   plain-language rendering against the text rather than taking it on trust. */
+const LEGAL={
+  gciv49:{
+    kicker:'International humanitarian law · treaty',
+    title:'Fourth Geneva Convention, Article 49',
+    meta:'Geneva Convention (IV) relative to the Protection of Civilian Persons in Time of War, 1949 · Part III, Section III — Occupied territories',
+    quote:'Individual or mass forcible transfers, as well as deportations of protected persons from occupied territory … are prohibited, regardless of their motive. Nevertheless, the Occupying Power may undertake total or partial evacuation of a given area if the security of the population or imperative military reasons so demand … persons thus evacuated shall be transferred back to their homes as soon as hostilities in the area in question have ceased.',
+    says:'In territory it occupies, an army may not force civilians out. It may evacuate an area only in two situations — to protect the people themselves, or because military necessity genuinely demands it — and even then the move is temporary. People must be brought home as soon as the fighting there stops, must be given proper accommodation, hygiene, safety and food on the way, and families must not be split up.',
+    why:'This is the clearest place in law where <b>moving people out of danger</b> and <b>forcing people out</b> are treated as two different acts rather than one. That distinction is the whole idea behind this index: scoring the risk of leaving separately from the risk of staying is an attempt to keep the difference visible in a number instead of letting it collapse. The 75% endangerment marker on the CERAI gauges is drawn from this article.',
+    justified:'<b>Only partly, and the gap is the biggest single weakness in the tool.</b> Article 49 sits in the Convention\'s section on <i>occupied territory</i> and binds an <i>Occupying Power</i>. This index carries no field recording whether any crisis is an occupation — so the 75% line is drawn identically on a flood in Yemen, a drought in Namibia and gang violence in Haiti, where this article has no application whatsoever. Read the marker as "this is roughly the severity at which the law starts to impose duties on someone", not as "this rule binds a party in this crisis". Adding a classification field is the highest-value change a future version could make.',
+    url:'https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949/article-49'
+  },
+  gciv17:{
+    kicker:'International humanitarian law · treaty',
+    title:'Fourth Geneva Convention, Article 17',
+    meta:'Geneva Convention (IV), 1949 — removal from besieged or encircled areas',
+    quote:'The Parties to the conflict shall endeavour to conclude local agreements for the removal from besieged or encircled areas, of wounded, sick, infirm, and aged persons, children and maternity cases.',
+    says:'When an area is surrounded or under siege, the sides fighting are expected to negotiate local arrangements to let particular people out: the wounded, the sick, the frail, the elderly, children, and women who are pregnant or have just given birth.',
+    why:'It is cited in the subgroup limitations because the law already names a category this index cannot express. For some people evacuation is not <i>harder</i> — it is <b>unavailable</b> without someone specifically arranging it. A person in obstructed labour, a dialysis patient, someone on a ventilator without power: no amount of "difficulty" describes their situation. The law understood this in 1949 by creating a separate mechanism for them.',
+    justified:'<b>As an illustration, yes; as an implemented rule, no.</b> The index has no hard cap on feasibility — the vulnerability profile can only multiply a score by up to 1.3, which cannot represent impossibility. Citing this article marks an acknowledged gap in the model. It changes no number.',
+    url:'https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949/article-17'
+  },
+  apii17:{
+    kicker:'International humanitarian law · treaty',
+    title:'Additional Protocol II, Article 17',
+    meta:'Protocol Additional to the Geneva Conventions (II), 1977 — non-international armed conflicts',
+    quote:'The displacement of the civilian population shall not be ordered for reasons related to the conflict unless the security of the civilians involved or imperative military reasons so demand. Should such displacements have to be carried out, all possible measures shall be taken in order that the civilian population may be received under satisfactory conditions of shelter, hygiene, health, safety and nutrition.',
+    says:'In a civil war — fighting inside one country rather than between countries — civilians must not be ordered to move because of the conflict, with the same two exceptions: their own safety, or genuine military necessity. If they do have to move, they must be received somewhere with adequate shelter, sanitation, healthcare, safety and food.',
+    why:'It is the civil-war counterpart of Article 49, and it matters here because <b>most armed conflicts on this map are civil wars, not occupations</b> — Sudan, Myanmar, the Sahel, the DRC. For those crises this is the provision that actually governs displacement.',
+    justified:'<b>This is arguably the more relevant rule for most crises shown, and the index does not use it.</b> The 75% marker is labelled Article 49 everywhere, including on crises where Protocol II is the applicable law. The reason is the same missing classification field: without knowing which kind of conflict a crisis is, the tool cannot point at the right rule, so it points at one rule for all of them.',
+    url:'https://ihl-databases.icrc.org/en/ihl-treaties/apii-1977/article-17'
+  },
+  ca2:{
+    kicker:'International humanitarian law · treaty',
+    title:'Common Article 2 (Geneva Conventions I–IV)',
+    meta:'Common to all four Geneva Conventions, 1949 — when the Conventions apply',
+    quote:'The present Convention shall apply to all cases of declared war or of any other armed conflict which may arise between two or more of the High Contracting Parties, even if the state of war is not recognized by one of them. The Convention shall also apply to all cases of partial or total occupation.',
+    says:'The Geneva Conventions switch on whenever two or more countries are fighting — whether or not anyone calls it a war, and whether or not either side admits a war is happening. They also switch on for occupation, even an occupation nobody resisted. There is no minimum amount of violence required.',
+    why:'It is the threshold question: whether the Fourth Geneva Convention, and therefore Article 49, applies at all. It appears in the classification table as the trigger for the first category.',
+    justified:'<b>Cited descriptively, and accurately.</b> The index records nothing about whether this threshold is met in any crisis. It is background a reader needs to interpret the 75% marker, not an input.',
+    url:'https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949/article-2'
+  },
+  ca3:{
+    kicker:'International humanitarian law · treaty',
+    title:'Common Article 3 (Geneva Conventions I–IV)',
+    meta:'Common to all four Geneva Conventions, 1949 — the minimum floor in civil wars',
+    quote:'Persons taking no active part in the hostilities … shall in all circumstances be treated humanely … To this end the following acts are and shall remain prohibited: violence to life and person, in particular murder of all kinds, mutilation, cruel treatment and torture; taking of hostages; outrages upon personal dignity … The wounded and sick shall be collected and cared for.',
+    says:'Often called "a convention in miniature". In conflicts that are not between countries, anyone not fighting — civilians, the wounded, prisoners — must be treated humanely. Murder, torture, hostage-taking and humiliating treatment are banned outright, and the wounded must be collected and cared for. It binds armed groups too, not only governments.',
+    why:'It marks the <b>lower boundary of humanitarian law</b>. Above it, IHL applies; below it — riots, gang violence, ordinary crime — human rights law governs instead, and none of the Article 49 machinery is engaged. That boundary is the fourth row of the classification table.',
+    justified:'<b>Cited descriptively.</b> The index carries no classification, so it cannot tell which side of this boundary a crisis sits on — which is precisely why crises below the threshold still get an Article 49 marker drawn on them.',
+    url:'https://ihl-databases.icrc.org/en/ihl-treaties/gciv-1949/article-3'
+  },
+  hague42:{
+    kicker:'International humanitarian law · treaty',
+    title:'Hague Regulations, Article 42',
+    meta:'Regulations annexed to Hague Convention IV, 1907 — the definition of occupation',
+    quote:'Territory is considered occupied when it is actually placed under the authority of the hostile army. The occupation extends only to the territory where such authority has been established and can be exercised.',
+    says:'Land counts as occupied when a foreign army is actually in control of it — not when it has been claimed, declared or fought over, but when that army\'s authority is genuinely established and can be exercised on the ground. Occupation covers exactly that area and no more.',
+    why:'It defines the one situation in which Article 49\'s evacuation regime applies in its own terms. It is why "belligerent occupation" is the only highlighted box in the third methodology figure.',
+    justified:'<b>Cited descriptively, and it is the right definition to cite.</b> Its presence makes the scope problem visible: this test is what would have to be applied, crisis by crisis, before the 75% marker could honestly be drawn.',
+    url:'https://ihl-databases.icrc.org/en/ihl-treaties/hague-conv-iv-1907/regulations-art-42'
+  },
+  api8:{
+    kicker:'International humanitarian law · treaty',
+    title:'Additional Protocol I, Article 8(a)',
+    meta:'Protocol Additional to the Geneva Conventions (I), 1977 — definitions',
+    quote:'"Wounded" and "sick" mean persons … who are in need of medical assistance or care and who refrain from any act of hostility. These terms also cover maternity cases, new-born babies and other persons who may be in need of immediate medical assistance or care, such as the infirm or expectant mothers.',
+    says:'The protected category "wounded and sick" is broader than it sounds. It formally includes women giving birth, newborn babies, expectant mothers and frail people — anyone needing medical care who is not taking part in the fighting.',
+    why:'It is the legal footing for putting pregnancy, new mothers and medical dependence into the vulnerability profile. Those toggles are not an intuition about who struggles to move; each corresponds to a group the law already singles out.',
+    justified:'<b>It justifies including the category. It does not justify the number.</b> Every toggle moves the multiplier by the same ±0.06, a placeholder chosen to demonstrate the mechanism. A strong legal basis for <i>listing</i> a group has not produced an evidence-based weight for it, and should not be read as having done so.',
+    url:'https://ihl-databases.icrc.org/en/ihl-treaties/api-1977/article-8'
+  },
+  customary:{
+    kicker:'International humanitarian law · customary',
+    title:'Customary IHL Rules 134, 135 and 138',
+    meta:'ICRC Study on Customary International Humanitarian Law, 2005 — binding regardless of which treaties a state has signed',
+    quote:'Rule 134: The specific protection, health and assistance needs of women affected by armed conflict must be respected. Rule 135: Children affected by armed conflict are entitled to special respect and protection. Rule 138: The elderly, disabled and infirm affected by armed conflict are entitled to special respect and protection.',
+    says:'Some rules bind every state because they reflect what states actually do and accept as law, whether or not that state signed a particular treaty. Three such rules require special respect and protection for women, for children, and for elderly, disabled and infirm people in armed conflict.',
+    why:'It is the legal basis for the elderly, children and disability toggles in the vulnerability profile — and, being customary, it applies without asking which treaties a given country has ratified.',
+    justified:'<b>Same limit as the other citations.</b> It supports listing these groups. It supplies no coefficient, and the index gives all twelve factors identical weight. The strength of the legal footing and the strength of the modelling are unrelated here.',
+    url:'https://ihl-databases.icrc.org/en/customary-ihl/v1/rule138'
+  },
+  tadic:{
+    kicker:'International case law',
+    title:'ICTY, Prosecutor v. Tadić (1995), §70',
+    meta:'Appeals Chamber, Decision on Jurisdiction — the working test for when an armed conflict exists',
+    quote:'An armed conflict exists whenever there is a resort to armed force between States or protracted armed violence between governmental authorities and organized armed groups or between such groups within a State.',
+    says:'A single sentence from a 1995 war-crimes tribunal ruling that became the standard test for whether a situation legally counts as an armed conflict. Two ingredients for a civil war: the armed groups must be <i>organised</i>, and the violence must be <i>protracted</i> rather than a one-off riot.',
+    why:'It supplies the trigger in the classification table for non-international armed conflict — the category most crises on this map would fall into if they were classified.',
+    justified:'<b>Cited descriptively.</b> Applying this test requires judgement about organisation and intensity that no dataset here carries. It is shown to make clear what a classification field would actually require, rather than implying the tool has already done it.',
+    url:'https://www.icty.org/en/case/tadic'
+  },
+  udhr13:{
+    kicker:'Human rights · declaration',
+    title:'Universal Declaration of Human Rights, Article 13',
+    meta:'UN General Assembly, 1948 — freedom of movement',
+    quote:'(1) Everyone has the right to freedom of movement and residence within the borders of each State. (2) Everyone has the right to leave any country, including his own, and to return to his country.',
+    says:'Everyone may move around their own country, may leave any country including their own, and may come back. Leaving does not require anyone\'s permission or a good enough reason.',
+    why:'It does two jobs here. It is a <b>constraint layer</b> — exit-visa requirements, travel bans and closure orders are things that stop people evacuating themselves, so the model treats them as obstacles to evacuation. And it is the <b>guardrail against misusing this tool</b>: an EII above 1.0 records that the model scored leaving as riskier than staying, which is not a finding that anyone should be stopped from leaving.',
+    justified:'<b>Strongly, with one technicality.</b> The Universal Declaration is a declaration, not a treaty, so it is not directly binding on states in the way a ratified treaty is. That is exactly why the binding version — ICCPR Article 12 — is cited alongside it wherever the guardrail matters.',
+    url:'https://www.un.org/en/about-us/universal-declaration-of-human-rights'
+  },
+  iccpr12:{
+    kicker:'Human rights · binding treaty',
+    title:'International Covenant on Civil and Political Rights, Article 12',
+    meta:'UN, 1966 · in force 1976 — freedom of movement, binding on states parties',
+    quote:'Everyone lawfully within the territory of a State shall … have the right to liberty of movement … Everyone shall be free to leave any country, including his own. The above-mentioned rights shall not be subject to any restrictions except those which are provided by law, are necessary to protect national security, public order, public health or morals or the rights and freedoms of others, and are consistent with the other rights recognized in the present Covenant.',
+    says:'The binding treaty version of the same freedom. Restrictions are allowed, but only on a short closed list of grounds — national security, public order, public health or morals, or other people\'s rights — and only if written into law and consistent with other rights.',
+    why:'It is what makes the misuse guardrail enforceable rather than aspirational. Because the permitted grounds are a closed list, the point can be made precisely: <b>"a risk model scored leaving as more dangerous" is not on that list.</b> Using this index to support a closure order, exit ban or refusal of passage inverts its purpose — the tool already counts such restrictions as obstacles to evacuation.',
+    justified:'<b>Fully, and it is the strongest citation in the tool.</b> Unlike the humanitarian-law references, this one does not depend on classifying the conflict. It applies to everyone lawfully present, in every crisis on the map, whatever its legal character.',
+    url:'https://www.ohchr.org/en/instruments-mechanisms/instruments/international-covenant-civil-and-political-rights'
+  },
+  crpd11:{
+    kicker:'Human rights · binding treaty',
+    title:'Convention on the Rights of Persons with Disabilities, Article 11',
+    meta:'UN, 2006 — situations of risk and humanitarian emergencies',
+    quote:'States Parties shall take, in accordance with their obligations under international law, including international humanitarian law and international human rights law, all necessary measures to ensure the protection and safety of persons with disabilities in situations of risk, including situations of armed conflict, humanitarian emergencies and the occurrence of natural disasters.',
+    says:'Countries must take all necessary measures to protect and keep safe people with disabilities during armed conflict, humanitarian emergencies and natural disasters. The duty is not limited to wartime — it explicitly covers floods, earthquakes and other disasters.',
+    why:'It is the legal footing for the disability and medical-dependence toggles, and it reaches further than the humanitarian-law citations because it covers natural disasters too — which matters when 65 of the 104 crises here are not armed conflicts at all.',
+    justified:'<b>Sound basis for inclusion, no basis for the weight.</b> The same ±0.06 placeholder applies. There is also a sharper problem this article highlights: WHO estimates around 16% of people live with significant disability, but the index carries no prevalence figures, so the profile describes a hypothetical person rather than a share of the affected population.',
+    url:'https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-rights-persons-disabilities'
+  },
+  gpid:{
+    kicker:'Soft law · widely accepted standard',
+    title:'Guiding Principles on Internal Displacement',
+    meta:'UN, 1998 — 30 principles restating existing law as it applies to displaced people inside their own country',
+    quote:'Principle 6: Every human being shall have the right to be protected against being arbitrarily displaced from his or her home or place of habitual residence. Principle 15: Internally displaced persons have the right to seek safety in another part of the country [and] to be protected against forcible return to or resettlement in any place where their life, safety, liberty and/or health would be at risk.',
+    says:'A consolidation, not a new treaty: it gathers what existing humanitarian and human rights law already says and restates it for people displaced <i>within</i> their own country — who fall outside refugee law precisely because they have not crossed a border. It protects against being displaced arbitrarily, and against being sent back somewhere dangerous.',
+    why:'It is what governs in the fourth row of the classification table — situations of violence below the armed-conflict threshold, where humanitarian law does not apply but people are still being displaced. Given how many crises here are gang violence, disaster or economic collapse, this is the framework covering a large share of the map.',
+    justified:'<b>Appropriately cited, with its status stated honestly.</b> These are not binding treaty law; they are widely accepted and incorporated into many national frameworks. Naming them prevents the fourth row from reading as a legal vacuum — displacement below the conflict threshold is still governed, just not by the Geneva Conventions.',
+    url:'https://www.ohchr.org/en/instruments-mechanisms/instruments/guiding-principles-internal-displacement'
+  },
+};
+
+/* Ordered longest-first so "GC IV Art. 49" is never eaten by a bare "Art. 49".
+   The bare forms are safe only because this document uses each unqualified
+   number for exactly one provision — checked against the rendered text. */
+const LAW_PATTERNS=[
+  [/\bAP II Art\.\s*17\b/g,'apii17'],
+  [/\bAP I Art\.\s*8\(a\)/g,'api8'],
+  [/\bAP I Art\.\s*8\b/g,'api8'],
+  [/\bGC IV Art\.\s*49\b/g,'gciv49'],
+  [/\bGC IV Art\.\s*17\b/g,'gciv17'],
+  [/\bCommon Art\.\s*2\b/g,'ca2'],
+  [/\bCommon Art\.\s*3\b/g,'ca3'],
+  [/\bHague Reg(?:ulation)?s? Art\.\s*42\b/g,'hague42'],
+  [/\bUDHR Art\.\s*13\b/g,'udhr13'],
+  [/\bICCPR Art\.\s*12\b/g,'iccpr12'],
+  [/\bCRPD Art\.\s*11\b/g,'crpd11'],
+  [/\bcustomary IHL Rule\s*138\b/gi,'customary'],
+  [/\bRules\s*134[–-]135\b/g,'customary'],
+  [/\bTadić\b/g,'tadic'],
+  [/\bGuiding Principles on Internal Displacement\b/g,'gpid'],
+  [/\bArticle\s*49\b/g,'gciv49'],
+  [/\bArt\.\s*49\b/g,'gciv49'],
+  [/\bArt\.\s*17\b/g,'gciv17'],
+];
+// Never rewrite inside these: SVG has its own <title> tooltips and its text is
+// positioned absolutely, links and buttons already do something on click, and
+// <code> is quoting source rather than prose.
+const LAW_SKIP=/^(svg|a|button|code|script|style|title|desc|option|select|textarea)$/i;
+
+function linkifyLaw(root){
+  if(!root) return 0;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){
+    if(!n.nodeValue||!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+    for(let p=n.parentElement;p&&p!==root;p=p.parentElement){
+      if(LAW_SKIP.test(p.tagName)||p.classList.contains('lawref')) return NodeFilter.FILTER_REJECT;
+    }
+    return NodeFilter.FILTER_ACCEPT;
+  }});
+  const targets=[]; let n;
+  while((n=walker.nextNode())) targets.push(n);
+  let count=0;
+  targets.forEach(node=>{
+    let text=node.nodeValue, best;
+    const frag=document.createDocumentFragment();
+    let guard=0;
+    while(guard++<50){
+      best=null;
+      for(const [re,key] of LAW_PATTERNS){
+        re.lastIndex=0;
+        const m=re.exec(text);
+        if(m && (!best || m.index<best.index)) best={index:m.index,text:m[0],key};
+      }
+      if(!best) break;
+      if(best.index) frag.appendChild(document.createTextNode(text.slice(0,best.index)));
+      // Copy the key into a per-iteration binding: `best` is reassigned on every
+      // pass and ends the loop as null, so a closure over it would fire with
+      // null on click.
+      const key=best.key, label=best.text;
+      const b=document.createElement('button');
+      b.type='button'; b.className='lawref'; b.textContent=label;
+      b.setAttribute('aria-label',`What is ${label}? Open explanation`);
+      b.addEventListener('click',()=>showLaw(key));
+      frag.appendChild(b); count++;
+      text=text.slice(best.index+best.text.length);
+    }
+    if(!count && !frag.childNodes.length) return;
+    if(text) frag.appendChild(document.createTextNode(text));
+    if(frag.childNodes.length) node.parentNode.replaceChild(frag,node);
+  });
+  return count;
+}
+
+let _lawReturnFocus=null;
+function showLaw(key){
+  const L=LEGAL[key]; if(!L) return;
+  _lawReturnFocus=document.activeElement;
+  document.getElementById('lawKicker').textContent=L.kicker;
+  document.getElementById('lawTitle').textContent=L.title;
+  document.getElementById('lawMeta').textContent=L.meta;
+  document.getElementById('lawBody').innerHTML=`
+    <div class="lawsec"><h4>What it says, in plain words</h4><p>${L.says}</p></div>
+    <div class="lawsec"><h4>The operative text</h4><p class="lawquote">${esc(L.quote)}</p></div>
+    <div class="lawsec"><h4>Why this index cites it</h4><p>${L.why}</p></div>
+    <div class="lawsec verdict"><h4>How far that is justified</h4><p>${L.justified}</p></div>
+    <div class="lawsec"><p class="lawsrc"><a href="${esc(safeUrl(L.url))}" target="_blank" rel="noopener noreferrer">Read the source text →</a></p></div>`;
+  document.getElementById('lawOverlay').hidden=false;
+  const m=document.getElementById('lawModal');
+  m.hidden=false; m.querySelector('.x').focus();
+}
+function closeLaw(){
+  document.getElementById('lawModal').hidden=true;
+  document.getElementById('lawOverlay').hidden=true;
+  if(_lawReturnFocus&&_lawReturnFocus.focus) _lawReturnFocus.focus();
+}
+document.getElementById('lawOverlay').addEventListener('click',closeLaw);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&!document.getElementById('lawModal').hidden) closeLaw();
+});
+
+// Clicking is only discoverable once you notice a citation is clickable, so the
+// same thirteen are also listed outright at the foot of the Methodology tab.
+(function buildLawIndex(){
+  const host=document.getElementById('lawGrid');
+  if(!host) return;
+  host.innerHTML=Object.entries(LEGAL).map(([k,L])=>
+    `<button type="button" class="lawcard" onclick="showLaw('${k}')">
+       <b>${esc(L.title)}</b><span>${esc(L.kicker)}</span></button>`).join('');
+})();
+
+// Run last, over the two panels that carry legal prose, so every citation in
+// them becomes clickable without each one having to be marked up by hand.
+(function(){
+  const hits=['method-panel','refs-panel'].reduce((a,id)=>a+linkifyLaw(document.getElementById(id)),0);
+  // The prose counts distinct provisions, not the number of times they appear —
+  // Art. 49 alone is cited a dozen times.
+  const c=document.getElementById('lawCount');
+  if(c) c.textContent=Object.keys(LEGAL).length;
+  const h=document.getElementById('lawHits');
+  if(h) h.textContent=hits;
+})();
 
 /* ---------- Tab switching ---------- */
 document.querySelectorAll('nav button').forEach(b=>{
