@@ -42,9 +42,12 @@
      column owns the positioning so the boxes inside it are in normal flow and
      cannot land on top of each other. It scrolls rather than growing past the
      map when several overlays are on together. */
+  /* Capped well short of the full height: the layer switcher sits at the top of
+     the same side, and a column of notes tall enough to reach it covers the
+     control that turns them off. */
   #mapnotes{position:absolute;left:18px;bottom:18px;z-index:1000;display:flex;
     flex-direction:column;gap:8px;align-items:flex-start;
-    max-height:calc(100% - 36px);overflow-y:auto;overscroll-behavior:contain}
+    max-height:min(58%,calc(100% - 36px));overflow-y:auto;overscroll-behavior:contain}
   #layernotes{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
   #mapnotes .legend{position:static;max-width:236px}
   #mapnotes .legend .legnote{max-width:none}
@@ -1116,7 +1119,13 @@ const streamWidth=(z,f)=>Math.max(.5,Math.min(3.4,(streamOrder(f)-minStreamOrder
 
 const waternetLayer=protomapsL.leafletLayer({
   url:WATERNET_URL,
-  maxDataZoom:11,          // the tileset stops here; beyond it, tiles are overzoomed
+  /* The tileset advertises zoom 11, but its top level is not present everywhere:
+     over Ethiopia — 283 Fika bridges and a live crisis — asking for it returned
+     nothing and the layer silently emptied above zoom 10, while Malawi, Rwanda
+     and Haiti were fine. Reading one level lower and overzooming costs a little
+     detail past zoom 11 and keeps the layer from vanishing in the places this
+     map is most often pointed at. */
+  maxDataZoom:9,
   attribution:'Waterways: <a href="https://source.coop/fika/waternet" target="_blank" rel="noopener">Fika WaterNet</a> (CC-BY 4.0) — modelled, not surveyed',
   labelRules:[],
   paintRules:[
@@ -1617,6 +1626,24 @@ function roadsHTML(r){
   return h;
 }
 
+/* A note that appears in the bottom-left column while its layer is on.
+
+   Not a Leaflet corner control, which is where these started. The controls
+   panel on the right spans the full height of the map, so a bottomright control
+   is drawn underneath it and never seen; and every note carrying .legend pinned
+   itself to the same coordinates, so two of them landed on top of each other.
+   One column, normal flow, no overlap. */
+function layerNote(html){
+  const el=document.createElement('div');
+  el.className='legend';
+  el.innerHTML=html;
+  const host=()=>document.getElementById('layernotes');
+  return {
+    add(){ const h=host(); if(h&&el.parentNode!==h) h.appendChild(el); },
+    remove(){ if(el.parentNode) el.parentNode.removeChild(el); },
+  };
+}
+
 /* ---------- Road blockages, pinned on the map ----------
    Built from snapshot/roads.json (see build_roads_layer.py), which flattens the
    road block out of all 104 detail files so the layer costs one request.
@@ -1684,21 +1711,16 @@ function buildRoadPins(d){
       .addTo(roadPinLayer);
   });
   // Say what the layer does not cover, where the layer is switched on.
-  const note=L.control({position:'bottomright'});
-  note.onAdd=function(){
-    const el=L.DomUtil.create('div','legend panelnote');
-    el.innerHTML=`<b>🚧 Reported blockages</b>
+  const note=layerNote(`<b>🚧 Reported blockages</b>
       <div class="legnote">${d.with_reports} of ${d.total} crises carry road-access reports.</div>
       <div class="legnote"><b>${d.unsearched} have never been searched</b> — no pin means
         no report, which is <i>not</i> evidence the roads are open.</div>
       ${d.unlocated ? `<div class="legnote"><b>${d.unlocated} carry reports but have no curated
         location</b> and are not drawn at all.</div>` : ''}
       <div class="legnote">Pins mark the crisis, not the blockage — and where the crisis is
-        located only to the country, the pin stands in for the whole country.</div>`;
-    return el;
-  };
-  roadPinLayer.on('add',()=>note.addTo(map));
-  roadPinLayer.on('remove',()=>note.remove());
+        located only to the country, the pin stands in for the whole country.</div>`);
+  roadPinLayer.on('add',note.add);
+  roadPinLayer.on('remove',note.remove);
 }
 
 async function loadRoadPins(){
@@ -1713,15 +1735,10 @@ async function loadRoadPins(){
   }catch(e){
     // A missing aggregate must not read as "no blockages anywhere".
     _roadsLoaded=false;
-    const warn=L.control({position:'bottomright'});
-    warn.onAdd=function(){
-      const el=L.DomUtil.create('div','legend panelnote');
-      el.innerHTML=`<b>🚧 Reported blockages</b>
+    const warn=layerNote(`<b>🚧 Reported blockages</b>
         <div class="legnote">Layer unavailable — <code>snapshot/roads.json</code> did not load.
-          Run <code>python3 build_roads_layer.py</code>.</div>`;
-      return el;
-    };
-    if(map.hasLayer(roadPinLayer)) warn.addTo(map);
+          Run <code>python3 build_roads_layer.py</code>.</div>`);
+    if(map.hasLayer(roadPinLayer)) warn.add();
   }
 }
 // Fetch on first switch-on rather than at startup: most visits never open it,
@@ -1741,7 +1758,7 @@ map.on('overlayadd',e=>{ if(e.layer===roadPinLayer) loadRoadPins(); });
    no Fika bridge at all. An empty area means "Fika has not built here", never
    "there is no crossing here". The note that appears with the layer says so,
    because on a sparse map the silent reading is the opposite one. */
-let _bridgesLoaded=false, _bridgeNote=null;
+let _bridgesLoaded=false;
 
 function bridgePopup(b){
   const bits=[];
@@ -1776,22 +1793,16 @@ function buildBridgePins(d){
 
   const top=Object.entries(d.countries||{}).slice(0,3)
     .map(([c,n])=>`${esc(c)} ${n}`).join(' · ');
-  const note=L.control({position:'bottomright'});
-  note.onAdd=function(){
-    const el=L.DomUtil.create('div','legend panelnote');
-    el.innerHTML=`<b>🌉 Fika trail bridges</b>
+  const note=layerNote(`<b>🌉 Fika trail bridges</b>
       <div class="legnote">${d.total} built crossings in ${Object.keys(d.countries||{}).length}
         countries — ${top}.</div>
       <div class="legnote"><b>No bridge does not mean no crossing.</b> This is where one
         organisation has built, not a survey of river crossings, and most crises on this
         map are in countries where Fika has never worked.</div>
       <div class="legnote">Points are surveyed structures — unlike the road pins, these are
-        where the thing actually is.</div>`;
-    return el;
-  };
-  _bridgeNote=note;
-  bridgeLayer.on('add',()=>note.addTo(map));
-  bridgeLayer.on('remove',()=>note.remove());
+        where the thing actually is.</div>`);
+  bridgeLayer.on('add',note.add);
+  bridgeLayer.on('remove',note.remove);
 }
 
 async function loadBridges(){
@@ -1808,15 +1819,10 @@ async function loadBridges(){
     // An empty layer would read as "no bridges anywhere", which is the exact
     // false reading this layer exists to avoid.
     _bridgesLoaded=false;
-    const warn=L.control({position:'bottomright'});
-    warn.onAdd=function(){
-      const el=L.DomUtil.create('div','legend panelnote');
-      el.innerHTML=`<b>🌉 Fika trail bridges</b>
+    const warn=layerNote(`<b>🌉 Fika trail bridges</b>
         <div class="legnote">Layer unavailable — <code>fika/bridges.json</code> did not load.
-          Run <code>python3 build_fika_bridges.py</code>.</div>`;
-      return el;
-    };
-    if(map.hasLayer(bridgeLayer)) warn.addTo(map);
+          Run <code>python3 build_fika_bridges.py</code>.</div>`);
+    if(map.hasLayer(bridgeLayer)) warn.add();
   }
 }
 map.on('overlayadd',e=>{ if(e.layer===bridgeLayer) loadBridges(); });
@@ -1824,20 +1830,15 @@ map.on('overlayadd',e=>{ if(e.layer===bridgeLayer) loadBridges(); });
 /* The waterways layer needs its own note for the same reason the legend gained
    a size key: an unexplained two-colour web invites the reader to assume both
    colours were surveyed. */
-const waternetNote=L.control({position:'bottomright'});
-waternetNote.onAdd=function(){
-  const el=L.DomUtil.create('div','legend panelnote');
-  el.innerHTML=`<b>💧 Waterways — Fika WaterNet</b>
+const waternetNote=layerNote(`<b>💧 Waterways — Fika WaterNet</b>
     <div><i style="background:#5db1ff"></i>Already mapped (TDX-Hydro)</div>
     <div><i style="background:#ffc247"></i>Added by the model</div>
     <div class="legnote">Machine-learning predictions from satellite imagery, not surveyed
       hydrography. A drawn stream may be seasonal, fordable or absent.</div>
     <div class="legnote">Small streams appear as you zoom in — the world view shows trunk
-      rivers only, or the map is a solid mat.</div>`;
-  return el;
-};
-waternetLayer.on('add',()=>waternetNote.addTo(map));
-waternetLayer.on('remove',()=>waternetNote.remove());
+      rivers only, or the map is a solid mat.</div>`);
+waternetLayer.on('add',waternetNote.add);
+waternetLayer.on('remove',waternetNote.remove);
 
 function backendDownHTML(err){
   return `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;
