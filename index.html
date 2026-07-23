@@ -246,6 +246,24 @@
   .road-caveat{font-size:11px;color:var(--muted);line-height:1.45;margin:0 0 8px}
   .news.road{border-left:3px solid #e3e8ee}
   .news.road a{display:block;margin-top:5px}
+  /* Road-blockage pins on the map. Square-ish and hard-edged so they read as a
+     different kind of thing from the round crisis dots — these mark a report
+     about a crisis, not a scored crisis. */
+  .roadpin{display:flex;align-items:center;justify-content:center;width:26px;height:26px;
+    border-radius:6px;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);
+    font-size:13px;line-height:1;cursor:pointer}
+  .roadpin.r-blocked{background:#b2182b}
+  .roadpin.r-damaged{background:#d7601f}
+  .roadpin.r-checkpoint{background:#8a6d1f}
+  .roadpin.r-reopened{background:#2c7a4b}
+  .roadpin .n{position:absolute;top:-6px;right:-6px;min-width:15px;height:15px;padding:0 3px;
+    border-radius:8px;background:var(--navy);color:#fff;font-size:9.5px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;border:1.5px solid #fff}
+  .roadpop h4{margin:0 0 4px;font-size:13.5px;color:var(--navy)}
+  .roadpop .where{font-size:11px;color:var(--muted);margin:0 0 7px}
+  .roadpop .scroll{max-height:240px;overflow-y:auto;margin-top:8px}
+  .roadpop .news.road{margin-bottom:7px}
+  .roadpop .news.road:last-child{margin-bottom:0}
   .bars{display:flex;align-items:flex-end;gap:3px;height:120px;padding:6px 0;border-bottom:1px solid var(--line)}
   .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
   .bar .f{width:100%;background:var(--c5);border-radius:2px 2px 0 0}
@@ -1012,12 +1030,35 @@ map.on('baselayerchange',e=>{
 
 const hasteLayer=L.tileLayer('',{opacity:.72, maxZoom:20,
   attribution:'Damage assessment: Microsoft HASTE + Planet'});
+
+/* Roads & streets — a transparent reference overlay that rides on whichever
+   base layer is showing, so the road network can be read against satellite
+   imagery instead of replacing it.
+
+   Not Google. Leaflet cannot legally consume Google's tiles directly — the
+   mt*.google.com/vt endpoints are undocumented and using them breaks the Maps
+   Platform terms — and the supported route, the Maps JavaScript API via
+   googlemutant, needs a billing-enabled API key embedded in the page. This
+   site is a keyless static build on GitHub Pages, so that key would be public
+   and billable. Esri's World Transportation is the same kind of layer, drawn
+   from OpenStreetMap and HERE data, free and keyless, and it is already the
+   provider of the imagery and labels above. */
+const roadsTiles=L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19, maxNativeZoom:19, opacity:.95,
+   attribution:'Roads © Esri — sources: OpenStreetMap, HERE, Garmin'});
+
+// Reported road blockages, pinned per crisis. Populated from snapshot/roads.json.
+const roadPinLayer=L.layerGroup();
+
 const layerControl=L.control.layers(
   {'🛰 High-res satellite (Esri) — zoomable':esriImagery,
    'Reference map (CARTO)':cartoLayer,
    '🛰 NASA satellite — VIIRS (daily)':viirsLayer,
    '🛰 NASA satellite — MODIS (daily)':modisLayer},
-  {'🛰 Damage assessment (HASTE)':hasteLayer},
+  {'🛣 Roads &amp; streets':roadsTiles,
+   '🚧 Road access — reported blockages':roadPinLayer,
+   '🛰 Damage assessment (HASTE)':hasteLayer},
   {position:'topleft', collapsed:false}
 ).addTo(map);
 
@@ -1388,7 +1429,9 @@ function nasaImgHTML(crisis,lat,lng){
    feed reports it for conflict zones — so this reads the news. Two limits are
    stated in the UI rather than hidden: the status is keyword-derived from the
    headline (a triage hint, not a verified fact), and news prose carries no
-   coordinates, so nothing here can be drawn as a route on the map. */
+   coordinates, so nothing here can be drawn as a route on the map. The map
+   layer built further down pins these reports at the crisis they belong to,
+   which is the most precision the source supports — a pin, never a route. */
 const ROAD_STATUS={
   blocked:   {label:'Blocked',    cls:'r-blocked',    icon:'⛔'},
   damaged:   {label:'Damaged',    cls:'r-damaged',    icon:'🧱'},
@@ -1421,6 +1464,104 @@ function roadsHTML(r){
   });
   return h;
 }
+
+/* ---------- Road blockages, pinned on the map ----------
+   Built from snapshot/roads.json (see build_roads_layer.py), which flattens the
+   road block out of all 104 detail files so the layer costs one request.
+
+   What a pin is, and is not. News prose carries no coordinates: a report that
+   "the Salah al-Din road is cut" names no point that can be plotted. So a pin
+   sits at the crisis it belongs to and means "road-access reports exist for
+   this crisis" — never "the blockage is here". The popup says so rather than
+   letting the reader assume a precision the source does not have.
+
+   The coverage note matters as much as the pins. The road search has run for
+   42 of 104 crises; the other 62 have never been looked at. An unpinned crisis
+   is therefore ambiguous, and on a map about whether people can get out, the
+   silent reading — "no pin, roads fine" — is the dangerous one. */
+let _roadsData=null, _roadsLoaded=false;
+
+function roadPinPopup(c){
+  const st=ROAD_STATUS[c.worst]||{label:c.worst||'reported',cls:'',icon:'•'};
+  const pills=ROAD_ORDER.filter(s=>c.counts[s])
+    .map(s=>`<span class="rpill ${ROAD_STATUS[s].cls}">${ROAD_STATUS[s].icon} ${c.counts[s]} ${ROAD_STATUS[s].label.toLowerCase()}</span>`)
+    .join('');
+  const pct=Math.round((c.signal||0)*100);
+  let h=`<div class="roadpop"><h4>🚧 ${esc(c.crisis||c.country||'')}</h4>
+    <p class="where">${esc(c.country||'')} · pinned at the crisis location, not at the blockage —
+      news reports carry no coordinates.</p>
+    <div class="road-sum">${pills}
+      <span class="rsignal">Obstruction signal <b>${pct}%</b></span></div>
+    <div class="road-caveat">Status is inferred from headline wording over the last
+      ${c.query_days||60} days, not verified. Open the source before acting on it.</div>
+    <div class="scroll">`;
+  (c.items||[]).forEach(it=>{
+    const s=ROAD_STATUS[it.status]||{label:it.status,cls:'',icon:'•'};
+    const amb=(it.tags||[]).length>1?`<span class="ramb" title="Matched both obstruction and reopening language">mixed signals</span>`:'';
+    h+=`<div class="news road"><span class="rpill ${s.cls}">${s.icon} ${s.label}</span>${amb}
+      <a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(it.title)}</a>
+      <div class="m">${esc(it.source||'')}${it.date?' · '+fmtDate(it.date):''}</div></div>`;
+  });
+  return h+'</div></div>';
+}
+
+function buildRoadPins(d){
+  roadPinLayer.clearLayers();
+  (d.crises||[]).forEach(c=>{
+    if(c.lat==null||c.lng==null) return;
+    const st=ROAD_STATUS[c.worst]||{cls:'',icon:'•'};
+    const n=Object.values(c.counts||{}).reduce((a,b)=>a+b,0);
+    const icon=L.divIcon({
+      className:'',
+      html:`<div class="roadpin ${st.cls}" style="position:relative">${st.icon}${
+        n>1?`<span class="n">${n}</span>`:''}</div>`,
+      iconSize:[26,26], iconAnchor:[13,13], popupAnchor:[0,-14]
+    });
+    L.marker([c.lat,c.lng],{icon,title:`Road access — ${c.crisis||c.country}`})
+      .bindPopup(roadPinPopup(c),{maxWidth:340})
+      .addTo(roadPinLayer);
+  });
+  // Say what the layer does not cover, where the layer is switched on.
+  const note=L.control({position:'bottomright'});
+  note.onAdd=function(){
+    const el=L.DomUtil.create('div','legend');
+    el.innerHTML=`<b>🚧 Reported blockages</b>
+      <div class="legnote">${d.with_reports} of ${d.total} crises carry road-access reports.</div>
+      <div class="legnote"><b>${d.unsearched} have never been searched</b> — no pin means
+        no report, which is <i>not</i> evidence the roads are open.</div>
+      <div class="legnote">Pins mark the crisis, not the blockage.</div>`;
+    return el;
+  };
+  roadPinLayer.on('add',()=>note.addTo(map));
+  roadPinLayer.on('remove',()=>note.remove());
+}
+
+async function loadRoadPins(){
+  if(_roadsLoaded) return;
+  _roadsLoaded=true;
+  try{
+    const r=await fetch('snapshot/roads.json');
+    if(!r.ok) throw new Error(r.status);
+    _roadsData=await r.json();
+    buildRoadPins(_roadsData);
+    if(map.hasLayer(roadPinLayer)) roadPinLayer.fire('add');
+  }catch(e){
+    // A missing aggregate must not read as "no blockages anywhere".
+    _roadsLoaded=false;
+    const warn=L.control({position:'bottomright'});
+    warn.onAdd=function(){
+      const el=L.DomUtil.create('div','legend');
+      el.innerHTML=`<b>🚧 Reported blockages</b>
+        <div class="legnote">Layer unavailable — <code>snapshot/roads.json</code> did not load.
+          Run <code>python3 build_roads_layer.py</code>.</div>`;
+      return el;
+    };
+    if(map.hasLayer(roadPinLayer)) warn.addTo(map);
+  }
+}
+// Fetch on first switch-on rather than at startup: most visits never open it,
+// and the map should not pay for a layer nobody asked for.
+map.on('overlayadd',e=>{ if(e.layer===roadPinLayer) loadRoadPins(); });
 
 function backendDownHTML(err){
   return `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;
