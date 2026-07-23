@@ -94,6 +94,52 @@ Not Google: Leaflet cannot lawfully consume Google's tiles directly, and the
 supported route through the Maps JavaScript API needs a billing-enabled key
 embedded in the page, which a public static deployment cannot hold safely.
 
+### Water and crossings — two layers from Fika
+
+A river with no crossing is a blocked route, and both halves of that sentence are
+badly mapped. Two overlays come from **[Fika](https://fika.org)** (formerly
+Bridges to Prosperity), whose rural-access work produces exactly this data.
+
+**💧 Waterways — WaterNet.** A machine-learning model Fika ran over satellite
+imagery to predict waterways worldwide; it roughly tripled the mapped extent, and
+most of what it added is the small rural drainage that separates a village from
+the road it would leave by. Served as PMTiles straight from Fika's public bucket
+(CC-BY 4.0) — 51 GB globally, but HTTP range requests mean the browser fetches
+only the tiles on screen, so nothing is vendored here.
+
+These are **predictions, not surveyed hydrography**, so the layer draws streams
+already present in TDX-Hydro in blue and the ones the model added in amber rather
+than one confident web that hides which half is inference. Streams thin by
+Strahler order as you zoom out, or the world view is a solid mat. Lines the model
+routes *across lake surfaces* to keep the network connected are dropped — drawn,
+they turn Lake Malawi into a hatched mat that reads as dozens of rivers. Nothing
+in this layer says a stream is bridged, fordable, or flowing this month.
+
+The tileset advertises zoom 11 but its top level is absent in places — over
+Ethiopia the layer silently emptied above zoom 10 — so the map reads one level
+lower and overzooms.
+
+**🌉 Trail bridges.** 962 pedestrian crossings Fika has built, supported or
+influenced, vendored into `fika/bridges.json`:
+
+```bash
+python3 build_fika_bridges.py      # refresh from Fika's published register
+```
+
+These are the inverse of the road pins in every way that matters. A road pin is a
+crisis-level stand-in for a report with no coordinates; a bridge is a **surveyed
+structure at a real point**, and it is positive evidence — a place where a river
+that would otherwise stop people on foot does not.
+
+The coverage caveat runs the other way, and it is the one a reader is most likely
+to get wrong. Fika works where Fika works: Rwanda (305) and Ethiopia (283) hold
+well over half of these, 14 of the 23 countries carry an EII crisis, and **most
+crises on the map are in countries with no Fika bridge at all**. An empty area
+means "Fika has not built here", never "there is no crossing here" — which is
+what the note beside the layer says, because on a sparse map the silent reading is
+the opposite one. 19 rows of the source register carry no usable coordinate and
+are dropped rather than parked at (0, 0); the build script reports the count.
+
 **Clickable legal citations.** Every provision cited in Methodology opens an
 explainer with four parts: what it says in plain words, the operative text, why
 this index cites it, and *how far that is justified*. The fourth is the point —

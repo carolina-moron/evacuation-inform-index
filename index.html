@@ -1112,7 +1112,12 @@ const WATERNET_URL='https://public-b2p-geodata.s3.us-east-1.amazonaws.com'
    capillaries come back — which is also where evacuation routes are decided. */
 function minStreamOrder(z){ return z<=4?9 : z<=6?7 : z<=8?5 : z<=10?3 : z<=12?2 : 1; }
 const streamOrder=f=>(f&&f.props&&+f.props.stream_order)||1;
-const streamShown=(z,f)=>streamOrder(f)>=minStreamOrder(z);
+/* The model routes streams across lake surfaces to keep the network connected.
+   Drawn as lines, those turn a lake into a hatched mat that reads as dozens of
+   rivers where there is one lake — Lake Malawi is the clearest case. WaterNet
+   flags them, so drop them. This also drops the last segment where a real river
+   meets a lake, which is a small loss next to hatching out the lake itself. */
+const streamShown=(z,f)=>streamOrder(f)>=minStreamOrder(z)&&f.props.intersects_lake!==true;
 // Width tracks how far above the cut-off a stream is, so the trunk stays legible
 // against the tributaries drawn beside it at the same zoom.
 const streamWidth=(z,f)=>Math.max(.5,Math.min(3.4,(streamOrder(f)-minStreamOrder(z))*.55+.6));
