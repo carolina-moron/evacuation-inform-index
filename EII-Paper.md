@@ -61,7 +61,19 @@ This report explains what the tool is, what it measures, where its numbers come 
 
 The word conflict does three different jobs in this index, and collapsing them is the most likely way to misread a score. They are set out separately here.
 
-**4.0.1 Conflict as a counted event.** Operationally, the index defines conflict as ACLED defines it: a dated, geolocated, sourced incident falling into one of six categories — battles, explosions and remote violence, violence against civilians, riots, protests, and strategic developments. The query is country wide and unfiltered by category, and the interface shows the resulting type mix per crisis.
+**4.0.1 Conflict as a counted event.** Operationally, the index defines conflict as ACLED defines it: a dated, geolocated, sourced incident falling into one of six categories. The query is country wide and unfiltered by category, and the interface shows the resulting type mix per crisis. The six, with their recorded volumes aggregated across the 96 of 104 crises that carry an ACLED timeline in the captured snapshot:
+
+| ACLED event type | What it covers | Events | Share | Reaches the score? |
+|---|---|---:|---:|---|
+| Explosions / remote violence | Shelling, airstrikes, IEDs, drone strikes | 185,992 | 26.6% | Yes — fatalities expected |
+| Protests | Non violent public demonstration | 183,943 | 26.3% | **No** — non violent by definition |
+| Battles | Armed clash between two organised armed actors | 127,449 | 18.2% | Yes — fatalities expected |
+| Violence against civilians | Attacks on unarmed civilians by an armed actor | 98,154 | 14.0% | Yes — fatalities expected |
+| Strategic developments | Contextual events: arrests, agreements, looting | 66,187 | 9.5% | **No** — non violent by definition |
+| Riots | Violent demonstration by a non organised mob | 38,410 | 5.5% | Sometimes — fatalities variable |
+| **Total** | | **700,135** | **100%** | |
+
+Two of the six, accounting for 250,130 events or 36 per cent of everything recorded, are non violent by ACLED's own definitions: a protest that turns violent is recoded as a riot, and strategic developments are explicitly contextual. They fill the timeline a user reads and contribute essentially nothing to the number the model computes. One caveat on this table's own evidence: the aggregation in `server.py` counts events per type but does not break fatalities down by type, so the final column is derived from ACLED's category definitions rather than from measured per type fatality data. Adding fatalities to that aggregation would let the claim be made from measurement.
 
 The score, however, uses one number from that stream: monthly fatalities. Three consequences follow, and each is a limitation rather than a design choice made for a reason.
 
