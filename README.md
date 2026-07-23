@@ -256,7 +256,7 @@ The full independent academic peer review of this report is in [PEER-REVIEW.md](
 **What the review found:**
 
 - The central proxy is unvalidated: INFORM Complexity (humanitarian access for responders) is used as a stand-in for civilian-evacuation risk, and the report never shows where the two diverge. — **Fixed: examined against the live 104-crisis dataset (new S4.2a).**
-- The headline ratio is fragile: the arbitrary 0.5 floor can swing it ~2.5x, and equal ratios hide very different absolute stakes. — **Partly fixed: the floor is shown to be inert on real data; the compression problem is now quantified.**
+- The headline ratio is fragile: the arbitrary 0.5 floor can swing it ~2.5x, and equal ratios hide very different absolute stakes. — **Fixed: the floor is shown to be inert on real data, the compression is quantified in the paper, and the crisis panel now warns where the ratio stops carrying information.**
 - No worked example: a tool meant to make a comparison visible never walks one real crisis through the numbers. — **Fixed: two crises walked end to end (new S4.2b).**
 
 **Noted strength:** Scoring leaving-vs-staying and danger-vs-feasibility as separate dimensions is a genuine contribution, paired with unusually honest self-disclosure.

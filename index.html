@@ -38,6 +38,16 @@
   .legend .gradbar{width:170px;height:11px;border-radius:6px;border:1px solid var(--line);margin:2px 0 3px}
   .legend .gradends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);line-height:1.3}
   .legend .legnote{margin-top:5px;font-size:11px;color:var(--muted);max-width:190px;line-height:1.4}
+  /* The bottom-left column: layer notes stacked above the metric legend. The
+     column owns the positioning so the boxes inside it are in normal flow and
+     cannot land on top of each other. It scrolls rather than growing past the
+     map when several overlays are on together. */
+  #mapnotes{position:absolute;left:18px;bottom:18px;z-index:1000;display:flex;
+    flex-direction:column;gap:8px;align-items:flex-start;
+    max-height:calc(100% - 36px);overflow-y:auto;overscroll-behavior:contain}
+  #layernotes{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+  #mapnotes .legend{position:static;max-width:236px}
+  #mapnotes .legend .legnote{max-width:none}
   /* Size key: hollow dots, so the swatch reads as size only and cannot be
      mistaken for a value on the colour ramp above it. */
   .legend .sizelegend{margin-top:8px;padding-top:7px;border-top:1px solid var(--line)}
@@ -56,6 +66,7 @@
   .lp td{padding:2px 6px;border-top:1px solid #eee}
   .lp td:last-child{text-align:right;font-variant-numeric:tabular-nums}
   .lp .lp-sizenote{color:var(--muted);font-size:10.5px}
+  .compress-note{font-size:11px;line-height:1.4;background:#fff8e6;border-left:3px solid #d09a3c;color:#6b4c14;padding:5px 8px;border-radius:4px;margin:4px 0 2px}
   .pill{display:inline-block;padding:1px 8px;border-radius:10px;color:#fff;font-size:11px;font-weight:700}
   /* What a map point actually represents — a named area, a hosting site, or a
      whole-country stand-in. Colour-coded so precision is legible at a glance. */
@@ -376,7 +387,14 @@
         <div class="haste-help">HASTE has no public API — run it yourself (<code>docker compose -f docker/docker-compose.yml up</code>), open a disaster project, and copy its damage-layer tile URL. See <a href="HASTE_SETUP.md" target="_blank" rel="noopener">HASTE_SETUP.md</a>.</div>
       </div>
     </div>
-    <div class="legend" id="legend"></div>
+    <!-- One bottom-left column for the metric legend and every layer's note.
+         Each note used to pin itself to the map corner independently, so two
+         overlays on at once put one note on top of the other. Stacking them in
+         a single flex column is what actually keeps them apart. -->
+    <div id="mapnotes">
+      <div id="layernotes"></div>
+      <div class="legend" id="legend"></div>
+    </div>
   </div>
 </section>
 
@@ -941,6 +959,11 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<!-- Vector-tile renderer for the Fika WaterNet waterways layer. Leaflet draws
+     raster tiles only; WaterNet ships as PMTiles vector tiles, and protomaps-leaflet
+     reads them over HTTP range requests so the browser pulls the few kilobytes in
+     view rather than the 51 GB global file. -->
+<script src="https://unpkg.com/protomaps-leaflet@5.1.0/dist/protomaps-leaflet.js"></script>
 <script src="data.js"></script>
 <script src="geo.js"></script>
 <script>
@@ -1059,6 +1082,56 @@ const roadsTiles=L.tileLayer(
 // Reported road blockages, pinned per crisis. Populated from snapshot/roads.json.
 const roadPinLayer=L.layerGroup();
 
+/* ---------- Waterways — Fika WaterNet ----------
+   A river with no crossing is a blocked route, and on the maps most evacuation
+   planning is drawn on, most rivers are missing. WaterNet is a machine-learning
+   model Fika (formerly Bridges to Prosperity) ran over satellite imagery to
+   predict waterways worldwide; it roughly tripled the mapped extent, and the
+   streams it added are disproportionately the small rural ones that cut a
+   village off from the road it would leave by.
+
+   What this layer is NOT: surveyed hydrography. These are model predictions,
+   including the ones drawn over already-mapped rivers. So the layer splits the
+   two apart by the from_tdx flag — confirmed streams (present in TDX-Hydro
+   before WaterNet ran) in blue, model-added streams in amber — rather than
+   drawing one confident blue web that hides which half is inference. Nothing
+   here says a stream is fordable, bridged, or seasonal.
+
+   Served straight from Fika's public bucket as PMTiles: 51 GB globally, but
+   HTTP range requests mean the browser fetches only the tiles on screen. */
+const WATERNET_URL='https://public-b2p-geodata.s3.us-east-1.amazonaws.com'
+                  +'/waternet-vector/waterway_model_outputs_20m_vector.pmtiles';
+
+/* Two billion line segments cover the planet, so the drawn set has to thin as
+   you zoom out or the world view is a solid mat. Strahler stream order is the
+   honest thinner: it drops headwater capillaries first and keeps the trunk
+   rivers that actually decide whether a route crosses water. Zoom in and the
+   capillaries come back — which is also where evacuation routes are decided. */
+function minStreamOrder(z){ return z<=4?9 : z<=6?7 : z<=8?5 : z<=10?3 : z<=12?2 : 1; }
+const streamOrder=f=>(f&&f.props&&+f.props.stream_order)||1;
+const streamShown=(z,f)=>streamOrder(f)>=minStreamOrder(z);
+// Width tracks how far above the cut-off a stream is, so the trunk stays legible
+// against the tributaries drawn beside it at the same zoom.
+const streamWidth=(z,f)=>Math.max(.5,Math.min(3.4,(streamOrder(f)-minStreamOrder(z))*.55+.6));
+
+const waternetLayer=protomapsL.leafletLayer({
+  url:WATERNET_URL,
+  maxDataZoom:11,          // the tileset stops here; beyond it, tiles are overzoomed
+  attribution:'Waterways: <a href="https://source.coop/fika/waternet" target="_blank" rel="noopener">Fika WaterNet</a> (CC-BY 4.0) — modelled, not surveyed',
+  labelRules:[],
+  paintRules:[
+    {dataLayer:'waterways',
+     filter:(z,f)=>streamShown(z,f)&&f.props.from_tdx===true,
+     symbolizer:new protomapsL.LineSymbolizer({color:'#5db1ff',width:streamWidth,opacity:.85})},
+    {dataLayer:'waterways',
+     filter:(z,f)=>streamShown(z,f)&&f.props.from_tdx!==true,
+     symbolizer:new protomapsL.LineSymbolizer({color:'#ffc247',width:streamWidth,opacity:.9})},
+  ],
+});
+
+// Fika trail bridges — built river crossings. Populated from fika/bridges.json.
+const bridgeLayer=L.layerGroup();
+
 const layerControl=L.control.layers(
   {'🛰 High-res satellite (Esri) — zoomable':esriImagery,
    'Reference map (CARTO)':cartoLayer,
@@ -1066,6 +1139,8 @@ const layerControl=L.control.layers(
    '🛰 NASA satellite — MODIS (daily)':modisLayer},
   {'🛣 Roads &amp; streets':roadsTiles,
    '🚧 Road access — reported blockages':roadPinLayer,
+   '💧 Waterways — Fika WaterNet (modelled)':waternetLayer,
+   '🌉 Trail bridges — Fika (built crossings)':bridgeLayer,
    '🛰 Damage assessment (HASTE)':hasteLayer},
   {position:'topleft', collapsed:false}
 ).addTo(map);
@@ -1266,6 +1341,43 @@ document.getElementById('typeNone').addEventListener('click',()=>{
 });
 buildTypeFilter();
 
+/* Where the ratio stops carrying information.
+
+   A ratio compresses as both of its terms approach the top of the scale: once
+   staying and leaving are each close to maximally bad, EII returns to 1.0 and
+   says nothing about how bad either is. On the April 2026 dataset the effect is
+   not subtle. The 25 crises where both components sit at 3.5 or above span an
+   EII range of just 0.30 (0.83 to 1.13); the other 79 span 2.14 (0.46 to 2.60).
+   Every large EII in the index comes from a low- or mid-severity crisis, which
+   means the headline number is least informative exactly where the stakes are
+   highest — the failure mode a reader is least likely to suspect and most
+   likely to be misled by.
+
+   The threshold of 3.5 is read off that distribution rather than chosen: it is
+   where the spread collapses. The note names the pair, because the pair is what
+   carries the information at that end of the scale. Raised as a peer-review
+   finding ("equal ratios hide very different absolute stakes"); the paper
+   quantifies it at S4.2a and walks Sudan through it at S4.2b. */
+const COMPRESSION_FLOOR = 3.5;
+/* Computed from the loaded dataset rather than written in, so the note cannot
+   go stale when the INFORM export is refreshed. */
+const COMPRESSION_STATS = (function(){
+  const band = [], rest = [];
+  (window.EDI_DATA || []).forEach(d => {
+    (Math.min(d.rss, d.rse) >= COMPRESSION_FLOOR ? band : rest).push(edi(d));
+  });
+  const span = a => a.length ? (Math.max(...a) - Math.min(...a)) : 0;
+  return { n: band.length, bandSpan: span(band).toFixed(2), restSpan: span(rest).toFixed(2) };
+})();
+function compressionNote(d){
+  if (Math.min(d.rss, d.rse) < COMPRESSION_FLOOR) return '';
+  return `<div class="compress-note"><b>The ratio carries little information here.</b>
+    Staying (${d.rss.toFixed(1)}) and leaving (${d.rse.toFixed(1)}) are both near the top of the
+    scale, so the index returns to about 1.0 whatever the absolute stakes. Read the pair, not the
+    ratio: this crisis is close to maximally bad in both directions. Across the ${COMPRESSION_STATS.n}
+    crises in this band the EII spans only ${COMPRESSION_STATS.bandSpan}, against ${COMPRESSION_STATS.restSpan} for the rest of the index.</div>`;
+}
+
 /* One crisis's card inside a popup. Several country-scope crises legitimately
    share a point (Iran hosts two, Ecuador three), so a popup may carry more than
    one of these — stacking them beats letting the top marker hide the rest. */
@@ -1278,6 +1390,7 @@ function popupCard(d,idx,metric){
   return `<div class="lp"><h3>${esc(d.crisis)}</h3>
     ${scopeChip(d)}
     <div class="edi">EII = ${e.toFixed(2)} &nbsp;${verdict}</div>
+    ${compressionNote(d)}
     <div class="cerai-mini">CERAI · Endangerment <b>${Math.round(cs.endanger)}%</b> <span class="cband">${cs.band}</span> &nbsp;·&nbsp; Feasibility <b>${Math.round(cs.feas)}%</b></div>
     <table>
       <tr><td>Risk of Evacuating (RSE) &mdash; Complexity</td><td>${d.rse.toFixed(1)}</td></tr>
@@ -1573,7 +1686,7 @@ function buildRoadPins(d){
   // Say what the layer does not cover, where the layer is switched on.
   const note=L.control({position:'bottomright'});
   note.onAdd=function(){
-    const el=L.DomUtil.create('div','legend');
+    const el=L.DomUtil.create('div','legend panelnote');
     el.innerHTML=`<b>🚧 Reported blockages</b>
       <div class="legnote">${d.with_reports} of ${d.total} crises carry road-access reports.</div>
       <div class="legnote"><b>${d.unsearched} have never been searched</b> — no pin means
@@ -1602,7 +1715,7 @@ async function loadRoadPins(){
     _roadsLoaded=false;
     const warn=L.control({position:'bottomright'});
     warn.onAdd=function(){
-      const el=L.DomUtil.create('div','legend');
+      const el=L.DomUtil.create('div','legend panelnote');
       el.innerHTML=`<b>🚧 Reported blockages</b>
         <div class="legnote">Layer unavailable — <code>snapshot/roads.json</code> did not load.
           Run <code>python3 build_roads_layer.py</code>.</div>`;
@@ -1614,6 +1727,117 @@ async function loadRoadPins(){
 // Fetch on first switch-on rather than at startup: most visits never open it,
 // and the map should not pay for a layer nobody asked for.
 map.on('overlayadd',e=>{ if(e.layer===roadPinLayer) loadRoadPins(); });
+
+/* ---------- Fika trail bridges ----------
+   Built pedestrian crossings, from fika/bridges.json (see build_fika_bridges.py).
+   These are the inverse of the road pins in every way that matters. A road pin
+   is a crisis-level stand-in for a report with no coordinates; a bridge is a
+   surveyed structure at a real point, and it is positive evidence — a place
+   where a river that would otherwise stop people on foot does not.
+
+   The coverage caveat runs the other direction too, and it is the one a reader
+   is most likely to get wrong. Fika works where Fika works: Rwanda and Ethiopia
+   hold well over half these bridges, while most EII crises sit in countries with
+   no Fika bridge at all. An empty area means "Fika has not built here", never
+   "there is no crossing here". The note that appears with the layer says so,
+   because on a sparse map the silent reading is the opposite one. */
+let _bridgesLoaded=false, _bridgeNote=null;
+
+function bridgePopup(b){
+  const bits=[];
+  if(b.type) bits.push(esc(b.type));
+  if(b.span) bits.push(`${b.span} m span`);
+  if(b.year) bits.push(`FY ${esc(b.year)}`);
+  // "Fika Built" vs "Supported" vs "Influenced" is the organisation's own
+  // gradation of involvement, and flattening it would overstate what it did.
+  const kind=b.kind?`<span class="tag">${esc(b.kind)}</span>`:'';
+  const stage=b.stage&&b.stage!=='Complete'
+    ? `<div class="loc-warn">Not yet in service — recorded as <b>${esc(b.stage)}</b>.</div>` : '';
+  return `<div class="lp"><h3>🌉 ${esc(b.n||'Unnamed bridge')}</h3>
+    <div class="meta">${esc(b.c||'')}${bits.length?' · '+bits.join(' · '):''}</div>
+    ${kind}
+    ${b.served?`<p style="margin:7px 0 0;font-size:12px">Serves <b>${b.served.toLocaleString()}</b> people directly, by Fika's estimate.</p>`:''}
+    ${stage}
+    <p style="margin:7px 0 0;font-size:11.5px;color:#5b6b7a">A built crossing over a river that
+      otherwise stops foot travel. It says nothing about whether the route to it is passable.</p></div>`;
+}
+
+function buildBridgePins(d){
+  bridgeLayer.clearLayers();
+  (d.bridges||[]).forEach(b=>{
+    // Small and plain: 962 of these must not compete with the crisis markers,
+    // which are the subject of the map.
+    L.circleMarker([b.lat,b.lng],{
+      radius:4, fillColor:'#2f9e6f', color:'#fff', weight:1.2, fillOpacity:.9
+    }).bindPopup(bridgePopup(b),{maxWidth:300})
+      .bindTooltip(`${b.n||'Bridge'} — ${b.c||''}`,{direction:'top'})
+      .addTo(bridgeLayer);
+  });
+
+  const top=Object.entries(d.countries||{}).slice(0,3)
+    .map(([c,n])=>`${esc(c)} ${n}`).join(' · ');
+  const note=L.control({position:'bottomright'});
+  note.onAdd=function(){
+    const el=L.DomUtil.create('div','legend panelnote');
+    el.innerHTML=`<b>🌉 Fika trail bridges</b>
+      <div class="legnote">${d.total} built crossings in ${Object.keys(d.countries||{}).length}
+        countries — ${top}.</div>
+      <div class="legnote"><b>No bridge does not mean no crossing.</b> This is where one
+        organisation has built, not a survey of river crossings, and most crises on this
+        map are in countries where Fika has never worked.</div>
+      <div class="legnote">Points are surveyed structures — unlike the road pins, these are
+        where the thing actually is.</div>`;
+    return el;
+  };
+  _bridgeNote=note;
+  bridgeLayer.on('add',()=>note.addTo(map));
+  bridgeLayer.on('remove',()=>note.remove());
+}
+
+async function loadBridges(){
+  if(_bridgesLoaded) return;
+  _bridgesLoaded=true;
+  try{
+    const r=await fetch('fika/bridges.json');
+    if(!r.ok) throw new Error(r.status);
+    const d=await r.json();
+    buildBridgePins(d);
+    if(map.hasLayer(bridgeLayer)) bridgeLayer.fire('add');
+    map.attributionControl.addAttribution(d.attribution||'Trail bridges © Fika');
+  }catch(e){
+    // An empty layer would read as "no bridges anywhere", which is the exact
+    // false reading this layer exists to avoid.
+    _bridgesLoaded=false;
+    const warn=L.control({position:'bottomright'});
+    warn.onAdd=function(){
+      const el=L.DomUtil.create('div','legend panelnote');
+      el.innerHTML=`<b>🌉 Fika trail bridges</b>
+        <div class="legnote">Layer unavailable — <code>fika/bridges.json</code> did not load.
+          Run <code>python3 build_fika_bridges.py</code>.</div>`;
+      return el;
+    };
+    if(map.hasLayer(bridgeLayer)) warn.addTo(map);
+  }
+}
+map.on('overlayadd',e=>{ if(e.layer===bridgeLayer) loadBridges(); });
+
+/* The waterways layer needs its own note for the same reason the legend gained
+   a size key: an unexplained two-colour web invites the reader to assume both
+   colours were surveyed. */
+const waternetNote=L.control({position:'bottomright'});
+waternetNote.onAdd=function(){
+  const el=L.DomUtil.create('div','legend panelnote');
+  el.innerHTML=`<b>💧 Waterways — Fika WaterNet</b>
+    <div><i style="background:#5db1ff"></i>Already mapped (TDX-Hydro)</div>
+    <div><i style="background:#ffc247"></i>Added by the model</div>
+    <div class="legnote">Machine-learning predictions from satellite imagery, not surveyed
+      hydrography. A drawn stream may be seasonal, fordable or absent.</div>
+    <div class="legnote">Small streams appear as you zoom in — the world view shows trunk
+      rivers only, or the map is a solid mat.</div>`;
+  return el;
+};
+waternetLayer.on('add',()=>waternetNote.addTo(map));
+waternetLayer.on('remove',()=>waternetNote.remove());
 
 function backendDownHTML(err){
   return `<div class="setup"><b>Backend not reachable.</b><br>This live view needs the Python backend. In the project folder run:<br><br><code>python3 server.py</code><br><br>then open <code>http://localhost:8000</code> (not the file directly).<br><br><span style="color:#a36">${esc(String(err))}</span></div>`;

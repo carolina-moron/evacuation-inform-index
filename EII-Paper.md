@@ -166,6 +166,8 @@ The review notes that the index is described but never run. Two crises, taken fr
 
 *Reading it:* both components are near the ceiling, so the index is saying that staying and leaving are both close to maximally bad, and that on these measures leaving is marginally the less bad of the two. The ratio's proximity to 1.0 carries little information; the pair (4.87, 4.73) carries most of it. This is exactly the compression described above, and it is why the tool displays both components rather than the ratio alone.
 
+**The tool now says so at the point the ratio is read.** Quantifying the compression in this paper does not help a user looking at a crisis panel, so the panel states it. Where both components sit at 3.5 or above on the five point scale, the panel carries a note that the ratio carries little information for that crisis, gives the pair, and says that staying and leaving are both close to maximally bad. The threshold is read off the distribution rather than chosen: the 25 crises in that band span an EII range of 0.30, from 0.83 to 1.13, while the other 79 span 2.14, from 0.46 to 2.60. The figures in the note are computed from the loaded dataset at run time, so a refreshed INFORM export cannot leave them stale. This is the residue of the review's second finding, which the earlier revision could only quantify.
+
 **2026 Floods in Yemen.** INFORM severity 3, INFORM index 4.2.
 
 1. INFORM Conditions = 1.36 → **RSS = 1.36** (the lowest in the dataset).
