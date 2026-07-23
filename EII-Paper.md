@@ -57,6 +57,37 @@ This report explains what the tool is, what it measures, where its numbers come 
 
 ## 4. How the Index Works
 
+### 4.0 Definitions: what the index means by conflict
+
+The word conflict does three different jobs in this index, and collapsing them is the most likely way to misread a score. They are set out separately here.
+
+**4.0.1 Conflict as a counted event.** Operationally, the index defines conflict as ACLED defines it: a dated, geolocated, sourced incident falling into one of six categories — battles, explosions and remote violence, violence against civilians, riots, protests, and strategic developments. The query is country wide and unfiltered by category, and the interface shows the resulting type mix per crisis.
+
+The score, however, uses one number from that stream: monthly fatalities. Three consequences follow, and each is a limitation rather than a design choice made for a reason.
+
+- A non lethal event contributes nothing. A month of mass arrest, forced relocation, checkpoint closure, property destruction, or looting in which nobody is killed reads as a quiet month.
+- Fatalities measure lethality, not the danger facing a civilian who has not yet been killed. Displacement risk and death counts are related but distinct quantities, and only the second is in the trajectory.
+- The ACLED access tier used here serves data on a roughly twelve month embargo. "Recent three months against the preceding three" may therefore mean recent as of a year ago. The interface reports the cutoff date it received rather than concealing it.
+
+**4.0.2 Conflict as a crisis driver.** INFORM Severity labels each crisis with one or more drivers. In the April 2026 release carried here, of 104 crises, 39 are labelled Conflict or Violence, 50 International Displacement, 25 Floods, 22 Drought, 18 Political or economic crisis, 9 Cyclone, and 1 Earthquake; most crises carry several, which is why the counts sum to more than 104.
+
+The index scores all 104 with the same formula. It does not restrict itself to armed conflict and it does not alter its arithmetic when the driver is a cyclone. A reader looking at the endangerment score for a drought is reading a quantity constructed for the same purpose as the one shown for a war. The driver label is carried in the data and displayed, but it does not enter the calculation.
+
+**4.0.3 Conflict as a legal classification.** The 75 per cent obligation marker is drawn from Article 49 of the Fourth Geneva Convention. That article sits in Part III, Section III of the Convention, which governs occupied territory, and it binds an Occupying Power. The index draws the line on all 104 crises whether or not an occupation exists. This is a deliberate simplification, and read strictly it is an overreach: the marker is a reference to a legal standard, not a claim that the standard is in force in every crisis shown.
+
+The classifications that actually determine which body of law applies are these.
+
+| Classification | Trigger | Consequence for evacuation |
+|---|---|---|
+| International armed conflict | Resort to armed force between States (Common Art. 2, GC I–IV); no intensity threshold | Full GC IV protections; Art. 49 applies where the situation is also one of occupation |
+| Belligerent occupation | Territory placed under the authority of a hostile army (Hague Regulations Art. 42) | The only situation in which the Art. 49 evacuation regime applies in terms: permitted for the security of the population or imperative military reasons, with return, accommodation, and family unity obligations attached |
+| Non international armed conflict | Organised armed groups and protracted armed violence (Common Art. 3; AP II where its conditions are met; ICTY, *Tadić*, 1995, para. 70) | Forced displacement of civilians prohibited by AP II Art. 17 unless their security or imperative military reasons demand it |
+| Other situations of violence | Internal disturbance, riot, gang and criminal violence below the armed conflict threshold | IHL does not apply. International and regional human rights law governs, together with the Guiding Principles on Internal Displacement |
+
+The index does not classify any crisis into these categories. It has no field for the classification and INFORM does not supply one. This matters because the legal consequence of a high endangerment score is different in each row: in an occupation it engages a specific evacuation regime, in a non international armed conflict it engages a prohibition on forced displacement, and in a situation of gang violence it engages human rights law and no part of Article 49 at all. Several crises on the map sit in that last row, where the framing the interface uses does not fit. Carrying an explicit classification field is the single highest value addition a future version could make to this section.
+
+**4.0.4 What falls outside the definition.** Criminal and gang violence is counted whenever ACLED records it, and nothing in the model distinguishes it from an armed conflict even though the legal consequences diverge sharply. Structural and slow onset harm — economic collapse, denial of services, statelessness — is partly present inside INFORM's Conditions score but absent from the conflict stream entirely. And three conflict forms are declared out of scope outright, inherited from the sibling calibration described in 8.4: genocide, large enclave precision operations, and sieges beyond roughly ninety days. In those three the model should not be used at all, rather than used with caution.
+
 ### 4.1 The central ratio
 
 The index expresses its result as a ratio: the Risk Score for Evacuating divided by the Risk Score for Staying.
@@ -234,7 +265,7 @@ The distinction matters. A demographic list alone would treat vulnerability as a
 
 ## 9. What the Index Does Not Do
 
-9.1 The repository states nine limitations. They are reproduced here because they are the most important part of the document for any reader considering what weight to give the tool.
+9.1 The repository states its limitations openly. They are reproduced here because they are the most important part of the document for any reader considering what weight to give the tool. Section 9.11 sets out a further set specific to vulnerable subgroups, since the treatment of those groups is where the gap between what the interface implies and what the arithmetic does is widest.
 
 9.2 Proxy construct. Endangerment and feasibility derive from INFORM sub scores supplemented by conflict and weather data. They are not CERAI's full twenty two variable engine. They should be read as a faithful architectural proxy, not a validated instrument.
 
@@ -254,6 +285,30 @@ The distinction matters. A demographic list alone would treat vulnerability as a
 
 9.10 Correlation, not causation. The index prioritises attention. It is decision support and must not be the sole basis for an evacuation decision.
 
+### 9.11 Limits specific to vulnerable subgroups
+
+The vulnerability profile described in 5.6 is the part of the tool most likely to be read as saying something about a particular person, and it is the part least able to. Twelve toggles each move a single multiplier by 0.06 within a band of 0.7 to 1.3. Every property of that construction is a limitation.
+
+**9.11.1 Equal increments assert an equivalence nobody has established.** Being non ambulatory and being a linguistic minority move the score by the same 0.06. No evidence supports that parity. It was a placeholder chosen so that the mechanism could be demonstrated, and it has not been replaced by anything better.
+
+**9.11.2 The band saturates at five factors.** Five upward toggles reach the 1.3 ceiling. The sixth through the tenth change nothing at all. The households carrying the most compounded vulnerability — an elderly, disabled, undocumented, non literate member of a targeted minority — are precisely where the model stops discriminating between cases.
+
+**9.11.3 A multiplier cannot express impossibility.** For some conditions evacuation is not harder, it is foreclosed: a non ambulatory person with no vehicle, a woman in obstructed labour, a dialysis patient with a three day interval, a ventilated patient without power. These require a hard cap on feasibility of the kind the roadmap's destination readiness gatekeepers apply to host authorities. Nothing in the model applies such a cap on behalf of a person. The law recognises the category even though the index does not: Article 17 of the Fourth Geneva Convention provides for local agreements to remove the wounded, the sick, the infirm, the aged, children and maternity cases from besieged or encircled areas, precisely because ordinary movement is not available to them.
+
+**9.11.4 Factors are treated as independent when they are correlated and interacting.** Elderly, disabled or medically dependent, and wounded or acutely sick overlap heavily in any real population; adding 0.06 for each counts one underlying condition up to three times. The error also runs the other way. Pregnancy combined with the absence of a functioning obstetric facility is worse than the sum of the two terms, and an additive form cannot represent that.
+
+**9.11.5 The two pathways are forced to mirror each other.** The implementation raises endangerment by the multiplier and lowers feasibility by its complement, the same magnitude with the sign reversed. That is wrong for most of the twelve. Being targeted for one's ethnicity multiplies the danger of remaining while leaving physical mobility untouched. Late term pregnancy does close to the reverse. A wheelchair user facing a flooded road suffers a collapse in feasibility without a corresponding jump in the danger of staying. Each factor needs two coefficients, one per pathway, not one number applied twice.
+
+**9.11.6 Binary toggles hide the variation that matters clinically.** Elderly, defined as 65 and over, spans an independent 66 year old and a bedbound 92 year old. Pregnant spans the first trimester and the thirty ninth week, states that differ by an order of magnitude for both danger and movement. Disabled covers a controlled chronic condition and complete dependence on assistive equipment and a carer. The toggle records the category and discards the severity, which is the part that determines whether the person can move.
+
+**9.11.7 The household is the evacuating unit, not the individual.** Families move at the pace of their least mobile member and frequently refuse to separate, a refusal the law supports: Article 49 requires that members of the same family not be separated. A profile of individual attributes cannot represent the fact that one immobile member can immobilise a household of eight, nor that the alternative to immobility is a separation international law discourages.
+
+**9.11.8 Care relationships are absent.** Both the dependent and the carer are constrained, and only the dependent appears in the list. The toggle for unaccompanied and separated minors exists; the adult whose own evacuation is constrained by three children and a parent with dementia does not.
+
+**9.11.9 No prevalence, therefore no caseload.** The profile answers how a scenario would shift a score. It never answers how many people in a given crisis are in that scenario. Standard planning figures exist and could be used: the World Health Organization estimates that roughly 16 per cent of the global population lives with a significant disability, and inter agency reproductive health planning commonly assumes that around 4 per cent of a crisis affected population is pregnant at any time. The index carries neither. Without prevalence, the multiplier describes a hypothetical person rather than the population the underlying crisis score is about.
+
+**9.11.10 The legal basis is cited but not operative.** The protection based groups were added because each has a footing in international law — Article 8(a) of Additional Protocol I classes maternity cases, newborn babies, the infirm and expectant mothers as wounded and sick and extends that protection to them; customary IHL Rule 138 entitles the elderly, disabled and infirm to special respect and protection; Rules 134 and 135 address women and children; Article 11 of the Convention on the Rights of Persons with Disabilities addresses persons with disabilities in situations of risk and humanitarian emergency. None of this changes the arithmetic. The legal basis explains why a group is on the list; it does not set that group's coefficient, and a reader should not infer that a strong legal footing has produced a strong weight.
+
 ---
 
 ## 10. Governance and Intended Use
@@ -264,7 +319,31 @@ The distinction matters. A demographic list alone would treat vulnerability as a
 
 10.3 It does not recommend evacuation. It does not rank populations for priority. It does not produce a threshold at which action becomes mandatory. The 75 per cent marker on the endangerment scale is a reference line drawn from the legal framework, not a trigger the software acts upon.
 
-10.4 Two constraint layers sit outside the scoring entirely, on the view that they should filter a recommendation rather than dilute it. A financial feasibility check asks whether a recommended action is affordable once transport, accommodation, asset loss, and income disruption are counted. A legal and rights check, referencing the freedom of movement affirmed in Article 13 of the Universal Declaration of Human Rights, flags exit visa requirements, travel bans, and closure orders that restrict people from evacuating themselves.
+### 10.4 Unit of analysis and resolution
+
+Before any statement of use, the scale of the instrument has to be explicit. The index produces one score per crisis, and most crises in INFORM are defined at country level. INFORM Severity refreshes monthly, ACLED weekly and subject to the embargo described in 4.0.1, weather live. The tool therefore operates at the scale of a national crisis over a month. It is not a corridor, a district, a convoy, or an hour, and no amount of care in reading it will make it those things.
+
+### 10.5 Questions the index is built to answer
+
+- Across a portfolio of active crises, where does the risk of staying diverge most sharply from the risk of leaving?
+- Where does high endangerment coincide with low feasibility, meaning the problem has passed beyond operational reach and become political?
+- Which crises are deteriorating on recent conflict evidence rather than on reputation or news volume?
+- What does an explicitly two sided, non compensatory evacuation model look like when it is actually built? This is a methodological demonstration and a teaching artefact as much as an analytical one.
+
+Its readers are analysts and advocacy staff comparing crises, researchers, and students of humanitarian method. It is not built for field operations and it is not built for affected people.
+
+### 10.6 Uses the index is not fit for
+
+Stated positively, so that a reader can check a proposed use against the list.
+
+- **Advising an individual or household whether to leave.** The scores are population level and the vulnerability profile is a scenario the user sets, not a record of anyone. Section 9.11 sets out why the profile in particular cannot bear this weight.
+- **Operational go or no go decisions** on a convoy, a corridor, or a movement window. The model holds no corridor state, no checkpoint state, and no ceasefire clock.
+- **Route selection or timing.** There is no route geometry in the index at all; the road access signal is keyword derived from news headlines and capped so that it can shade a score but never drive one.
+- **Ranking who evacuates first.** The tool does not prioritise populations and has no defensible basis on which to do so.
+- **Any determination affecting a person's legal status** — asylum, visa, protection claim, or eligibility.
+- **Justifying a restriction on movement.** This is the misuse the design most needs to name. A ratio above 1.0 records that the model scored evacuation as carrying more risk than remaining. It is not a finding that anyone should be prevented from leaving. Freedom of movement, affirmed in Article 13 of the Universal Declaration and Article 12 of the ICCPR, is not conditioned on the output of a risk model. Any use of this index to support a closure order, an exit ban, or a refusal of passage inverts its purpose, and the fact that the tool already flags such restrictions as constraints on evacuation, in 10.7 below, should make that reading harder rather than easier.
+
+10.7 Two constraint layers sit outside the scoring entirely, on the view that they should filter a recommendation rather than dilute it. A financial feasibility check asks whether a recommended action is affordable once transport, accommodation, asset loss, and income disruption are counted. A legal and rights check, referencing the freedom of movement affirmed in Article 13 of the Universal Declaration of Human Rights, flags exit visa requirements, travel bans, and closure orders that restrict people from evacuating themselves.
 
 ---
 
