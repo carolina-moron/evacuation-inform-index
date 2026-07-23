@@ -5,3 +5,4 @@ __pycache__/
 venv/
 
 snapshot_run.log
+.DS_Store

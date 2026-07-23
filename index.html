@@ -50,6 +50,23 @@
   .lp td{padding:2px 6px;border-top:1px solid #eee}
   .lp td:last-child{text-align:right;font-variant-numeric:tabular-nums}
   .pill{display:inline-block;padding:1px 8px;border-radius:10px;color:#fff;font-size:11px;font-weight:700}
+  /* What a map point actually represents — a named area, a hosting site, or a
+     whole-country stand-in. Colour-coded so precision is legible at a glance. */
+  .scopechip{font-size:11px;line-height:1.35;padding:5px 8px;border-radius:6px;margin:6px 0 2px;border-left:3px solid}
+  .scopechip .sc-kind{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.4px;opacity:.75;margin-top:2px}
+  .sc-sub{background:#eaf4ec;border-color:#4f9a63;color:#245c33}
+  .sc-recept{background:#eef2fb;border-color:#5a7fc4;color:#2a4477}
+  .sc-country{background:#fdf4e6;border-color:#d09a3c;color:#7a561b}
+  .sc-low{display:inline-block;background:#a5342a;color:#fff;border-radius:8px;padding:0 6px;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;vertical-align:1px}
+  /* The same three colours used inline in prose, as a legend swatch. */
+  .scopechip.sc-inline{display:inline-block;margin:2px 0;padding:1px 6px;border-left-width:2px}
+  .locblock{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+  .locblock .scopechip{margin-top:0}
+  .loc-basis{font-size:12px;color:var(--ink);line-height:1.5;margin-top:6px}
+  .loc-coord{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:4px}
+  .loc-warn{font-size:11.5px;line-height:1.5;color:#7a561b;background:#fdf4e6;border-radius:5px;padding:6px 8px;margin-top:8px}
+  .multi{font-size:11.5px;font-weight:700;color:var(--navy);background:#eef1f6;border-radius:5px;padding:4px 7px;margin-bottom:6px}
+  hr.lpsep{border:0;border-top:1px dashed #ccd4de;margin:12px 0}
   /* CONTENT PANELS */
   .doc{max-width:1000px;margin:0 auto;padding:26px 22px 60px}
   .doc h2{color:var(--navy);font-size:22px;margin:6px 0 4px}
@@ -70,6 +87,7 @@
 .rowgo{font-size:11px;font-weight:600;color:var(--navy2);opacity:0;transition:opacity .12s;white-space:nowrap}
 .clickrow:hover .rowgo,.clickrow:focus .rowgo{opacity:1}
 .flash{animation:flashHi 1.6s ease-out}
+.linkish{background:none;border:0;padding:0;font:inherit;color:var(--navy2);font-weight:600;text-decoration:underline;cursor:pointer}
 @keyframes flashHi{0%,20%{background:#fff3cd;border-radius:6px}100%{background:transparent}}
 .snapnote{background:#eef3fa;border:1px solid #cfe0f2;border-radius:8px;padding:9px 12px;font-size:12px;line-height:1.5;color:var(--navy);margin:0 0 12px}
 .sec-sep{border:0;border-top:2px solid var(--line);margin:34px 0 6px}
@@ -233,6 +251,7 @@
       </select>
       <div class="note"><b>Real data.</b> RSS = INFORM <i>Conditions of people affected</i>; RSE = INFORM <i>Complexity</i> (access, safety, operating environment), each rescaled 1→5. Click any crisis dot for the full breakdown.</div>
       <div class="note"><b>Reading the heatmap.</b> Intensity is the selected metric, and overlapping crises reinforce each other. The smooth field between dots is a rendering effect, <i>not</i> a measurement — EII scores discrete crises, so only the dots carry data.</div>
+      <div class="note" id="geonote"><b>What a dot means.</b> INFORM publishes no coordinates, so each crisis is placed by hand and labelled with what the point represents: <span class="scopechip sc-inline sc-sub">a named sub-national area</span> <span class="scopechip sc-inline sc-recept">a reception / hosting area</span> or <span class="scopechip sc-inline sc-country">a whole-country stand-in</span>. Country-scope dots sit at the population-weighted centroid, not the geographic centre — they mark a country, not a place. Sources are in <code>geo/locations.csv</code>.</div>
       <div class="haste-box">
         <label for="hasteUrl">🛰 Damage assessment — <a href="https://aka.ms/HASTE" target="_blank" rel="noopener">Microsoft HASTE</a> + Planet</label>
         <input id="hasteUrl" type="text" placeholder="Paste HASTE damage-layer tile URL (…/cog/tiles/WebMercatorQuad/{z}/{x}/{y}?scale=1&amp;url=…)">
@@ -296,6 +315,24 @@
     </table>
     <div class="note-box"><b>Honest scope.</b> This is a faithful proxy of CERAI's <i>architecture</i> built from data the index already carries (INFORM + ACLED + Open-Meteo, plus an optional Microsoft HASTE satellite-damage overlay) plus the interactive D3 profile — <b>not</b> CERAI's full 22-variable IHL engine, source-credibility weighting, Monte-Carlo robustness, or 47-case comparator. CERAI scores map to the INFORM 0–10 scale by ÷10, so the two frameworks are directly comparable.</div>
 
+    <h3 id="conflict-def">Definitions — what this index counts as "conflict"</h3>
+    <p>The word does three different jobs here, and collapsing them is the most likely way to misread a score. They are kept apart deliberately.</p>
+    <table class="t">
+      <tr><th>Sense</th><th>Definition used</th><th>What it means for the score</th></tr>
+      <tr><td><b>1 · Conflict as a counted event</b><br><span class="cg-sub" style="display:inline">operational</span></td><td>ACLED's definition: a dated, geolocated, sourced incident in one of six categories — <i>battles, explosions/remote violence, violence against civilians, riots, protests, strategic developments</i>. The query is country-wide and unfiltered; the timeline shows the type mix.</td><td>Only <b>monthly fatalities</b> enter the score (the trajectory). So: a month of mass arrests, forced relocation, checkpoint closures or looting with no deaths reads as a <i>quiet month</i>; fatalities measure lethality, not danger to a civilian not yet killed; and the ACLED tier used here carries a <b>~12-month embargo</b>, so "recent 3 months" can mean recent as of a year ago (the cutoff date is shown).</td></tr>
+      <tr><td><b>2 · Conflict as a crisis driver</b><br><span class="cg-sub" style="display:inline">what's on the map</span></td><td>INFORM Severity's driver labels. Of the 104 crises carried here: <b>39</b> Conflict/Violence, 50 International Displacement, 25 Floods, 22 Drought, 18 Political/economic crisis, 9 Cyclone, 1 Earthquake — most crises carry several, so the counts sum to more than 104.</td><td>All 104 are scored with the <b>same formula</b>. The index does not restrict itself to armed conflict and does not change its arithmetic when the driver is a cyclone. The driver label is displayed but <b>never enters the calculation</b>.</td></tr>
+      <tr><td><b>3 · Conflict as a legal classification</b><br><span class="cg-sub" style="display:inline">what sets the obligations</span></td><td>The IHL categories below — IAC, occupation, NIAC, and other situations of violence.</td><td><b>Not modelled.</b> The index has no classification field and INFORM supplies none. See the caveat under the table.</td></tr>
+    </table>
+    <table class="t">
+      <tr><th>Classification</th><th>Trigger</th><th>Consequence for evacuation</th></tr>
+      <tr><td><b>International armed conflict</b></td><td>Resort to armed force between States (Common Art. 2, GC I–IV) — no intensity threshold</td><td>Full GC IV protections; Art. 49 applies where the situation is <i>also</i> one of occupation</td></tr>
+      <tr><td><b>Belligerent occupation</b></td><td>Territory placed under the authority of a hostile army (Hague Regs Art. 42)</td><td>The <b>only</b> situation where the Art. 49 evacuation regime applies in terms: permitted for the security of the population or imperative military reasons, with return, accommodation and family-unity obligations attached</td></tr>
+      <tr><td><b>Non-international armed conflict</b></td><td>Organised armed groups + protracted armed violence (Common Art. 3; AP II where its conditions are met; ICTY <i>Tadić</i> 1995, §70)</td><td>Forced displacement of civilians prohibited by <b>AP II Art. 17</b> unless their security or imperative military reasons demand it</td></tr>
+      <tr><td><b>Other situations of violence</b></td><td>Internal disturbance, riot, gang/criminal violence — below the armed-conflict threshold</td><td><b>IHL does not apply.</b> Human rights law governs, with the Guiding Principles on Internal Displacement</td></tr>
+    </table>
+    <div class="note-box"><b>Where the 75% marker overreaches.</b> GC IV Art. 49 sits in Part III, Section III of the Convention — <i>occupied territory</i> — and binds an <b>Occupying Power</b>. This index draws the 75% line on all 104 crises whether or not an occupation exists. It is a reference to a legal standard, <b>not</b> a claim the standard is in force in every crisis shown. The consequence of a high endangerment score differs by row above: in an occupation it engages a specific evacuation regime; in a NIAC it engages a prohibition on forced displacement; in gang violence it engages human rights law and <i>no part of Art. 49 at all</i>. Several crises on this map sit in that last row. Carrying an explicit classification field is the highest-value addition a future version could make.</div>
+    <div class="note-box"><b>Outside the definition.</b> Criminal/gang violence is counted whenever ACLED records it, and nothing distinguishes it from armed conflict though the legal consequences diverge sharply. Structural and slow-onset harm (economic collapse, denial of services, statelessness) sits partly inside INFORM <i>Conditions</i> but is absent from the conflict stream. Three forms are <b>out of scope outright</b>, inherited from the ercf calibration: <b>genocide, large-enclave precision operations, and sieges beyond ~90 days</b> — there the model should not be used at all, rather than used with caution.</div>
+
     <h3>Three-layer architecture</h3>
     <p class="click-hint">▸ Click a layer to see its variables &amp; proposed weights.</p>
     <table class="t">
@@ -319,6 +356,29 @@
 
     <h3>Constraint layers (not scored)</h3>
     <p><b>Financial feasibility filter</b> — a second-stage check on whether the recommended action is affordable (transport, accommodation, asset-liquidation loss, income disruption). <b>Legal / rights (UDHR Art. 13)</b> — flags exit-visa requirements, travel bans or closure orders that restrict self-evacuation.</p>
+
+    <h3 id="intended-use">Intended use — and what this is not fit for</h3>
+    <div class="note-box"><b>Unit of analysis.</b> One score per crisis, and most INFORM crises are defined at <b>country level</b>. INFORM refreshes monthly, ACLED weekly (subject to the ~12-month embargo), weather live. This is an instrument at the scale of <b>a national crisis over a month</b> — not a corridor, a district, a convoy, or an hour. No amount of care in reading it makes it those things.</div>
+    <table class="t">
+      <tr><th>Built to answer</th><th>Not fit for</th></tr>
+      <tr>
+        <td>
+          • Across a portfolio of active crises, where does the risk of <i>staying</i> diverge most sharply from the risk of <i>leaving</i>?<br>
+          • Where does high endangerment coincide with low feasibility — i.e. where has the problem passed beyond operational reach and become <b>political</b>?<br>
+          • Which crises are deteriorating on recent conflict evidence rather than on reputation or news volume?<br>
+          • What does an explicitly two-sided, non-compensatory evacuation model look like when actually built? (method demonstration / teaching artefact)<br>
+          <br><span class="cg-sub" style="display:inline">Readers: analysts and advocacy staff comparing crises, researchers, students of humanitarian method. <b>Not</b> field operations. <b>Not</b> affected people.</span>
+        </td>
+        <td>
+          • <b>Advising an individual or household whether to leave.</b> Scores are population-level; the vulnerability profile is a scenario you set, not a record of anyone — see the subgroup limitations below.<br>
+          • <b>Operational go/no-go</b> on a convoy, corridor or movement window — there is no corridor state, checkpoint state or ceasefire clock in the model.<br>
+          • <b>Route selection or timing</b> — there is no route geometry at all; the road-access signal is keyword-derived from headlines and capped at 12 pts by design.<br>
+          • <b>Ranking who evacuates first</b> — the tool does not prioritise populations and has no defensible basis to.<br>
+          • <b>Any determination of a person's legal status</b> — asylum, visa, protection claim, eligibility.<br>
+          • <b>Justifying a restriction on movement.</b> EII &gt; 1.0 records that the <i>model</i> scored evacuation as riskier than staying. It is <b>not</b> a finding that anyone should be prevented from leaving. Freedom of movement (UDHR Art. 13; ICCPR Art. 12) is not conditioned on a risk model's output. Using this index to support a closure order, exit ban or refusal of passage <b>inverts its purpose</b> — the tool already treats such restrictions as <i>constraints on</i> evacuation, above.
+        </td>
+      </tr>
+    </table>
 
     <hr class="sec-sep">
 
@@ -401,6 +461,22 @@
       <li><b>Evidence quality varies.</b> Source-credibility tiering is a design principle; live inputs (ACLED, Tavily) differ in verification and are not yet weighted by it in code.</li>
       <li><b>Satellite &amp; damage layers are optional.</b> The HASTE damage overlay requires a self-hosted deployment; without it, physical-damage evidence is absent.</li>
       <li><b>Correlation, not causation.</b> The index prioritises attention; it is decision-support and must not be the sole basis for an evacuation decision.</li>
+      <li><b>Conflict is defined three ways, only two of which are modelled.</b> See <a href="#conflict-def">Definitions</a>: the score counts <i>fatalities only</i>, the driver label never enters the arithmetic, and the legal classification (IAC / occupation / NIAC / other situations of violence) is not carried at all — so the 75% Art. 49 marker is drawn on crises where that article does not apply.</li>
+    </ul>
+
+    <h3 id="subgroup-limits">Limits specific to vulnerable subgroups</h3>
+    <p>The Dimension-3 profile is the part of this tool most likely to be read as saying something about a <i>particular person</i>, and the part least able to. Twelve toggles each move one multiplier by <b>±0.06</b> within a <b>0.7–1.3</b> band. Every property of that construction is a limitation:</p>
+    <ul class="refs">
+      <li><b>Equal increments assert an equivalence nobody established.</b> Being non-ambulatory and being a linguistic minority move the score by the same 0.06. No evidence supports that parity — it is a placeholder chosen to demonstrate the mechanism, not yet replaced.</li>
+      <li><b>The band saturates at five factors.</b> Five upward toggles hit the 1.3 ceiling; the 6th–10th change nothing. The households carrying the most compounded vulnerability — an elderly, disabled, undocumented, non-literate member of a targeted minority — are exactly where the model <i>stops discriminating between cases</i>.</li>
+      <li><b>A multiplier cannot express impossibility.</b> For some conditions evacuation is not <i>harder</i> but <i>foreclosed</i>: a non-ambulatory person with no vehicle, a woman in obstructed labour, a dialysis patient on a 3-day interval, a ventilated patient without power. These need a <b>hard cap on feasibility</b> — the kind the roadmap's destination-readiness gatekeepers apply to <i>hosts</i>, but nothing applies on behalf of a <i>person</i>. The law recognises the category even where the index does not: <b>GC IV Art. 17</b> provides for local agreements to remove the wounded, sick, infirm, aged, children and maternity cases from besieged areas, precisely because ordinary movement is unavailable to them.</li>
+      <li><b>Factors are treated as independent when they are correlated and interacting.</b> Elderly / disabled-or-medically-dependent / wounded overlap heavily in any real population — adding 0.06 each counts one underlying condition up to three times. The error runs both ways: pregnancy <i>plus</i> no functioning obstetric facility is worse than the sum of the terms, and an additive form cannot represent it.</li>
+      <li><b>The two pathways are forced to mirror each other.</b> The code raises endangerment by <code>m</code> and lowers feasibility by <code>(2−m)</code> — same magnitude, opposite sign. That is wrong for most of the twelve. Being <i>targeted for one's ethnicity</i> multiplies the danger of remaining while leaving mobility untouched; <i>late-term pregnancy</i> does close to the reverse; a <i>wheelchair user on a flooded road</i> suffers a feasibility collapse with no matching jump in the danger of staying. Each factor needs <b>two coefficients, one per pathway</b>.</li>
+      <li><b>Binary toggles discard the severity that decides the outcome.</b> "Elderly (65+)" spans an independent 66-year-old and a bedbound 92-year-old. "Pregnant" spans the first trimester and the 39th week — states differing by an order of magnitude for both danger and movement. "Disabled" covers a controlled chronic condition and total dependence on assistive equipment and a carer.</li>
+      <li><b>The household is the evacuating unit, not the individual.</b> Families move at the pace of their least mobile member and frequently refuse to separate — a refusal the law supports (<b>Art. 49</b> requires that members of the same family not be separated). Individual attribute toggles cannot represent one immobile member immobilising a household of eight, nor that the alternative is a separation IHL discourages.</li>
+      <li><b>Care relationships are absent.</b> Both dependent and carer are constrained; only the dependent is on the list. There is a toggle for unaccompanied minors — none for the adult whose evacuation is constrained by three children and a parent with dementia.</li>
+      <li><b>No prevalence, therefore no caseload.</b> The profile answers "how would this scenario shift the score", never "how many people in this crisis are in it". Planning figures exist and could be used — WHO estimates ~<b>16%</b> of the global population lives with significant disability, and inter-agency reproductive-health (MISP) planning commonly assumes ~<b>4%</b> of a crisis-affected population is pregnant at any time — the index carries neither. Without prevalence the multiplier describes a <i>hypothetical person</i>, not the population the crisis score is about.</li>
+      <li><b>The legal basis is cited but not operative.</b> The protection-based groups were added because each has a footing in law — <b>AP I Art. 8(a)</b> classes maternity cases, newborns, the infirm and expectant mothers as "wounded and sick"; <b>customary IHL Rule 138</b> entitles the elderly, disabled and infirm to special respect and protection (Rules 134–135 for women and children); <b>CRPD Art. 11</b> covers persons with disabilities in situations of risk. None of this changes the arithmetic. A strong legal footing has <i>not</i> produced a strong weight, and should not be read as having done so.</li>
     </ul>
   </div>
 </section>
@@ -458,9 +534,42 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="data.js"></script>
+<script src="geo.js"></script>
 <script>
 /* ---------- Live data from INFORM Severity Index (see data.js) ---------- */
-const LOCS = window.EII_DATA || window.EDI_DATA || [];
+/* INFORM publishes no coordinates, so data.js originally placed every crisis at
+   a rounded country centroid — and, where a country carried several crises, at
+   that centroid plus a ~0.9° offset so the markers would not overlap. That put
+   Gaza in southern Syria, Papua in Sulawesi and Cabo Delgado 800 km south of
+   itself. geo.js (built from geo/locations.csv) replaces those points with a
+   curated location per crisis and records what each point represents, so the
+   map can say whether it is showing a place or a country-level stand-in. */
+const GEO = window.EII_GEO || {};   // detailSlug() is declared below and hoisted
+const LOCS = (window.EII_DATA || window.EDI_DATA || []).map((d,i,all)=>{
+  // Same collision guard as snapshot.py: a repeated slug takes a -<n> suffix.
+  let slug=detailSlug(d.crisis,d.name);
+  if(all.slice(0,i).some(p=>detailSlug(p.crisis,p.name)===slug)) slug=`${slug}-${i+1}`;
+  const g=GEO[slug];
+  return g ? {...d, slug, lat:g.lat, lng:g.lng, place:g.place, scope:g.scope,
+              confidence:g.confidence, basis:g.basis}
+           : {...d, slug, place:null, scope:'unlocated', confidence:'low', basis:''};
+});
+const UNLOCATED = LOCS.filter(d=>d.scope==='unlocated').length;
+const SCOPE_LABEL = {
+  subnational:'Sub-national area',
+  reception:'Reception / hosting area',
+  country:'Country-level approximation',
+  unlocated:'No curated location',
+};
+// A country-scope point is a stand-in for a whole country, so the map should not
+// draw it with the same apparent precision as a named province or camp.
+function scopeChip(d){
+  if(!d.place) return '';
+  const cls = d.scope==='country' ? 'sc-country' : d.scope==='reception' ? 'sc-recept' : 'sc-sub';
+  const lowConf = d.confidence==='low'
+    ? ' <span class="sc-low" title="INFORM names no sub-national area for this crisis, so the point is a country-level stand-in">approximate</span>' : '';
+  return `<div class="scopechip ${cls}">📍 ${esc(d.place)}<span class="sc-kind">${SCOPE_LABEL[d.scope]}</span>${lowConf}</div>`;
+}
 const FLOOR = 0.5;
 function edi(d){ return d.rse / Math.max(d.rss, FLOOR); }
 
@@ -627,41 +736,70 @@ const LABELS={edi:"EII (evacuate ÷ stay)", rss:"Risk of Staying", rse:"Risk of 
 
 function metricVal(d,m){ return m==="edi"?edi(d):d[m]; }
 
+/* One crisis's card inside a popup. Several country-scope crises legitimately
+   share a point (Iran hosts two, Ecuador three), so a popup may carry more than
+   one of these — stacking them beats letting the top marker hide the rest. */
+function popupCard(d,idx,metric){
+  const e=edi(d);
+  const verdict = e>1.05 ? '<span class="pill" style="background:#d7301f">Staying favored</span>'
+                : e<0.95 ? '<span class="pill" style="background:#2c7fb8">Evacuation favored</span>'
+                : '<span class="pill" style="background:#888">Near parity</span>';
+  const cs=ceraiScores(d,null,null);
+  return `<div class="lp"><h3>${esc(d.crisis)}</h3>
+    ${scopeChip(d)}
+    <div class="edi">EII = ${e.toFixed(2)} &nbsp;${verdict}</div>
+    <div class="cerai-mini">CERAI · Endangerment <b>${Math.round(cs.endanger)}%</b> <span class="cband">${cs.band}</span> &nbsp;·&nbsp; Feasibility <b>${Math.round(cs.feas)}%</b></div>
+    <table>
+      <tr><td>Risk of Evacuating (RSE) &mdash; Complexity</td><td>${d.rse.toFixed(1)}</td></tr>
+      <tr><td>Risk of Staying (RSS) &mdash; Conditions</td><td>${d.rss.toFixed(1)}</td></tr>
+      <tr><td>Impact of crisis</td><td>${d.impact?d.impact.toFixed(1):'—'}</td></tr>
+      <tr><td>INFORM Severity (1&ndash;10)</td><td>${d.informIdx}</td></tr>
+      <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
+    </table>
+    <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${esc(d.drivers||'—')}</p>
+    <button type="button" class="detailbtn" onclick="inspectImagery(${d.lat},${d.lng})">🔍 Zoom high-res satellite imagery</button>
+    <button type="button" class="detailbtn" onclick="goLive(${idx})">📈 Live updates &amp; conflict timeline →</button></div>`;
+}
+
 function draw(metric,mode){
   mode=mode||document.getElementById('display').value;
   layer.clearLayers();
   const [mn,mx]=RANGES[metric];
   const showHeat=mode!=='circles', showCircles=mode!=='heat';
   const heatPts=[];
+  // Group by exact coordinate. Crises that share a country-level point now
+  // genuinely share it — the old data faked a ~0.9° offset to keep them apart,
+  // which moved markers ~100 km to solve a rendering problem. One marker per
+  // location, listing everything there, is the honest version of that fix.
+  const groups=new Map();
   LOCS.forEach((d,idx)=>{
-    const v=metricVal(d,metric);
+    const key=`${d.lat},${d.lng}`;
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push({d,idx});
+    // Heat still gets one point per crisis: two crises in one country really do
+    // stack, and reinforcement is the correct reading there.
+    const t=Math.max(0,Math.min(1,(metricVal(d,metric)-mn)/(mx-mn)));
+    heatPts.push([d.lat,d.lng,HEAT_MIN_INTENSITY+(1-HEAT_MIN_INTENSITY)*t]);
+  });
+  groups.forEach(members=>{
+    // Colour and size a shared marker by its strongest member, so a cluster
+    // never reads as calmer than the worst crisis inside it.
+    const top=members.reduce((a,b)=>metricVal(b.d,metric)>metricVal(a.d,metric)?b:a);
+    const v=metricVal(top.d,metric);
     const t=Math.max(0,Math.min(1,(v-mn)/(mx-mn)));
     const col=ramp(v,mn,mx);
-    heatPts.push([d.lat,d.lng,HEAT_MIN_INTENSITY+(1-HEAT_MIN_INTENSITY)*t]);
+    const {d}=top;
     // In heat-only mode the dots shrink to plain click targets — the heat
     // carries the value, so sizing them by it too would double-encode.
-    const r=showCircles ? 8+t*14 : 5;
+    const r=(showCircles ? 8+t*14 : 5)+(members.length>1?2:0);
     const m=L.circleMarker([d.lat,d.lng],showCircles
-      ? {radius:r,fillColor:col,color:'#fff',weight:1.5,fillOpacity:.88}
-      : {radius:r,fillColor:'#0b2545',color:'#fff',weight:1.5,fillOpacity:.9});
-    const e=edi(d);
-    const verdict = e>1.05 ? '<span class="pill" style="background:#d7301f">Staying favored</span>'
-                  : e<0.95 ? '<span class="pill" style="background:#2c7fb8">Evacuation favored</span>'
-                  : '<span class="pill" style="background:#888">Near parity</span>';
-    const cs=ceraiScores(d,null,null);
-    m.bindPopup(`<div class="lp"><h3>${d.crisis}</h3>
-      <div class="edi">EII = ${e.toFixed(2)} &nbsp;${verdict}</div>
-      <div class="cerai-mini">CERAI · Endangerment <b>${Math.round(cs.endanger)}%</b> <span class="cband">${cs.band}</span> &nbsp;·&nbsp; Feasibility <b>${Math.round(cs.feas)}%</b></div>
-      <table>
-        <tr><td>Risk of Evacuating (RSE) &mdash; Complexity</td><td>${d.rse.toFixed(1)}</td></tr>
-        <tr><td>Risk of Staying (RSS) &mdash; Conditions</td><td>${d.rss.toFixed(1)}</td></tr>
-        <tr><td>Impact of crisis</td><td>${d.impact?d.impact.toFixed(1):'—'}</td></tr>
-        <tr><td>INFORM Severity (1&ndash;10)</td><td>${d.informIdx}</td></tr>
-        <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
-      </table>
-      <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${d.drivers||'—'}</p>
-      <button type="button" class="detailbtn" onclick="inspectImagery(${d.lat},${d.lng})">🔍 Zoom high-res satellite imagery</button>
-      <button type="button" class="detailbtn" onclick="goLive(${idx})">📈 Live updates &amp; conflict timeline →</button></div>`);
+      ? {radius:r,fillColor:col,color:'#fff',weight:members.length>1?2.5:1.5,fillOpacity:.88}
+      : {radius:r,fillColor:'#0b2545',color:'#fff',weight:members.length>1?2.5:1.5,fillOpacity:.9});
+    const hd = members.length>1
+      ? `<div class="multi">${members.length} crises are scored at this location</div>` : '';
+    m.bindPopup(hd+members.map(({d,idx})=>popupCard(d,idx,metric)).join('<hr class="lpsep">'),
+                {maxHeight:420});
+    if(members.length>1) m.bindTooltip(`${members.length} crises`,{direction:'top'});
     layer.addLayer(m);
   });
   heatLayer.setLatLngs(showHeat?heatPts:[]);
@@ -817,8 +955,12 @@ function detailSlug(crisis,country){
 }
 // Try the live Python backend first (local dev); on GitHub Pages there is no
 // backend, so fall back to the baked static snapshot so the app still works.
-async function fetchDetail(crisis,country,days){
-  const qs=`crisis=${encodeURIComponent(crisis)}&country=${encodeURIComponent(country)}`+(days?`&days=${days}`:'');
+// `place` is the curated location label. Sending it lets the backend anchor the
+// Tavily searches on the actual affected area ("Cabo Delgado province" rather
+// than "northern Mozambique"), which is where the news and road reports are.
+async function fetchDetail(crisis,country,days,place){
+  const qs=`crisis=${encodeURIComponent(crisis)}&country=${encodeURIComponent(country)}`
+    +(days?`&days=${days}`:'')+(place?`&place=${encodeURIComponent(place)}`:'');
   try{
     const r=await fetch(`/api/detail?${qs}`);
     if(r.ok) return await r.json();
@@ -966,6 +1108,7 @@ function ceraiBlockHTML(d, detail, weather){
   const vuln=`<div class="cerai-vuln">
     <div class="cerai-note"><b>Vulnerability profile — Dimension 3</b> · multiplier <b>×${m.toFixed(2)}</b> &nbsp;<span class="cg-sub" style="display:inline">▲ raises endangerment / lowers feasibility · ▼ the reverse · protection-based groups mapped from ETC evac projects</span></div>
     <div class="vchips">${chips}</div>
+    <div class="cerai-note"><span class="cg-sub" style="display:inline"><b>Read this before using the toggles.</b> Every factor moves the multiplier by the same ±0.06 and the band saturates at <b>five</b> factors — a household with ten scores the same as one with five. The effect is mirrored across both pathways (×${m.toFixed(2)} up on endangerment, ×${(2-m).toFixed(2)} on feasibility), which is wrong for most groups: being targeted raises the danger of staying without touching mobility; late-term pregnancy or non-ambulatory status does the reverse. And a multiplier can never express <i>impossibility</i> — for a dialysis patient or a woman in obstructed labour, evacuation is foreclosed, not 6% harder. This is a scenario you are setting, not a record of anyone. See <button type="button" class="linkish" onclick="showDoc('subgroup-limits')">subgroup limitations →</button></span></div>
   </div>`;
   return `<div class="cerai">
     <div class="cerai-hd">🧭 <b>CERAI lens</b> — endangerment and feasibility, kept separate (never one score)</div>
@@ -1076,7 +1219,11 @@ const liveDays=document.getElementById('liveDays');
 let _liveLoaded=null;
 LOCS.map((d,i)=>({d,i})).sort((a,b)=>b.d.informIdx-a.d.informIdx).forEach(({d,i})=>{
   const o=document.createElement('option');
-  o.value=i; o.textContent=`${d.crisis} — ${d.name} · INFORM ${d.informIdx}`;
+  o.value=i;
+  // Sub-national and reception crises name a real place; country-scope ones
+  // would just repeat the country already in the label.
+  const where = d.place && d.scope!=='country' ? ` (${d.place})` : '';
+  o.textContent=`${d.crisis} — ${d.name}${where} · INFORM ${d.informIdx}`;
   liveSel.appendChild(o);
 });
 // Show API spend so you can watch your Tavily credits (cached loads cost 0).
@@ -1091,6 +1238,20 @@ async function refreshUsage(){
       +`<span class="u-note">${esc(u.note||'')}</span>`;
   }catch(e){}
 }
+/* The location block for the Live tab: where the point is, what it stands for,
+   and — for country-scope crises — an explicit warning that everything derived
+   from these coordinates is a national approximation. */
+function locationHTML(d){
+  if(!d.place) return '';
+  const caveat = d.scope==='country'
+    ? `<div class="loc-warn">This crisis is scored at national scope, so route weather, the satellite view and the road-access search below describe the country's population centre — <b>not</b> a specific evacuation route.${d.confidence==='low'?' INFORM names no affected sub-national area for this crisis, so a more precise point could not be assigned without inventing one.':''}</div>`
+    : '';
+  return `<div class="locblock">${scopeChip(d)}
+    <div class="loc-basis">${esc(d.basis)}</div>
+    <div class="loc-coord">${d.lat.toFixed(3)}, ${d.lng.toFixed(3)} · curated in <code>geo/locations.csv</code></div>
+    ${caveat}</div>`;
+}
+
 async function loadLive(idx){
   const d=LOCS[idx]; if(!d) return;
   const days=liveDays.value||'60';
@@ -1099,10 +1260,15 @@ async function loadLive(idx){
   _liveLoaded=idx;
   const nasa=nasaImgHTML(d.crisis,d.lat,d.lng);
   try{
-    const detail=await fetchDetail(d.crisis,d.name,days);
+    // Only a real sub-national place sharpens the search; a country-scope label
+    // ("Somalia — national") would just repeat the country term.
+    const detail=await fetchDetail(d.crisis,d.name,days,d.scope==='country'?null:d.place);
     const weather=await fetchWeather(d.lat,d.lng);
     _ceraiCtx={d,detail,weather};
-    body.innerHTML='<div id="ceraiHost"></div>'+buildDetailHTML(detail,nasa);
+    // Lead with what the coordinates mean: the weather, the satellite zoom and
+    // the road search below are all anchored to this point, so its precision
+    // bounds how much any of them can be trusted.
+    body.innerHTML=locationHTML(d)+'<div id="ceraiHost"></div>'+buildDetailHTML(detail,nasa);
     renderCerai();
   }catch(err){ body.innerHTML=backendDownHTML(err); }
   refreshUsage();
@@ -1120,6 +1286,16 @@ function activateTab(name){
 function showVars(layer){
   activateTab('method');
   const el=document.getElementById('var-'+layer);
+  if(el){
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    el.classList.add('flash');
+    setTimeout(()=>el.classList.remove('flash'),1600);
+  }
+}
+// Any in-app pointer -> jump to the Methodology tab, scrolled to that heading.
+function showDoc(id){
+  activateTab('method');
+  const el=document.getElementById(id);
   if(el){
     el.scrollIntoView({behavior:'smooth',block:'start'});
     el.classList.add('flash');

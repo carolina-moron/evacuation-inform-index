@@ -36,6 +36,22 @@ def load_crises():
         sys.exit("could not parse window.EDI_DATA from data.js")
     return json.loads(m.group(1))
 
+def load_geo():
+    """Curated crisis locations from geo.js (built by geo/build_geo.py).
+
+    Supplies both the coordinates written into snapshot/index.json and the
+    `place` term that anchors each Tavily search on the actual affected area.
+    """
+    p = os.path.join(ROOT, "geo.js")
+    if not os.path.exists(p):
+        print("warn: geo.js not found — run python3 geo/build_geo.py. "
+              "Falling back to the country-centroid coordinates in data.js.")
+        return {}
+    m = re.search(r"window\.EII_GEO\s*=\s*(\{.*\})\s*;", open(p, encoding="utf-8").read(), re.S)
+    if not m:
+        sys.exit("could not parse window.EII_GEO from geo.js")
+    return json.loads(m.group(1))
+
 def main():
     force = "--force" in sys.argv
     roads = "--no-roads" not in sys.argv
@@ -52,6 +68,7 @@ def main():
 
     os.makedirs(OUT, exist_ok=True)
     crises = load_crises()
+    geo = load_geo()
     slugs, index = {}, []
     done = skipped = failed = 0
 
@@ -61,8 +78,14 @@ def main():
         if slug in slugs:  # collision guard
             slug = f"{slug}-{i}"
         slugs[slug] = True
+        g = geo.get(slug) or {}
+        # Only a real sub-national location sharpens the search; a country-scope
+        # label ("Somalia — national") would just repeat the country term.
+        place = g.get("place") if g.get("scope") in ("subnational", "reception") else None
         index.append({"crisis": crisis, "country": country, "slug": slug,
-                      "lat": c.get("lat"), "lng": c.get("lng")})
+                      "lat": g.get("lat", c.get("lat")), "lng": g.get("lng", c.get("lng")),
+                      "place": g.get("place"), "scope": g.get("scope"),
+                      "confidence": g.get("confidence")})
         path = os.path.join(OUT, slug + ".json")
 
         if os.path.exists(path) and not force:
@@ -70,20 +93,25 @@ def main():
             print(f"[{i}/{len(crises)}] skip  {slug}")
             continue
 
-        resp = {"crisis": crisis, "country": country, "cached": False, "days": days,
+        resp = {"crisis": crisis, "country": country, "place": place,
+                "cached": False, "days": days,
                 "tavily": None, "acled": None, "roads": None, "errors": [],
                 "keys": {"tavily": bool(tk), "acled": bool(ae and ap)},
                 "snapshot": True}
         if tk:
             try:
                 resp["tavily"] = server.tavily_news(
-                    tk, f"{country} {crisis} latest conflict, security and humanitarian developments",
+                    tk, f"{server.crisis_query(country, crisis, place)} "
+                        "latest conflict, security and humanitarian developments",
                     days=days)
+                server.usage_bump("tavily")   # a real search credit was spent
             except Exception as e:
                 resp["errors"].append(f"tavily: {e}")
             if roads:
                 try:
-                    resp["roads"] = server.tavily_roads(tk, country, crisis, days=days)
+                    resp["roads"] = server.tavily_roads(tk, country, crisis,
+                                                        days=days, place=place)
+                    server.usage_bump("tavily")   # second search = second credit
                 except Exception as e:
                     resp["errors"].append(f"roads: {e}")
         if ae and ap:
@@ -92,12 +120,28 @@ def main():
             except Exception as e:
                 resp["errors"].append(f"acled: {e}")
 
+        # Never overwrite a good snapshot with an empty one. A run against an
+        # expired or missing API key returns nothing but errors for every
+        # crisis, and blindly writing that result destroys the committed
+        # snapshot the hosted site depends on — the failure mode is silent,
+        # because each crisis still reports "ok". server.py already refuses to
+        # cache empty responses for the same reason.
+        got_data = bool(resp["tavily"] or resp["acled"] or resp["roads"])
+        if not got_data:
+            failed += 1
+            print(f"[{i}/{len(crises)}] FAIL  {slug}  no data returned — "
+                  f"existing snapshot left untouched. errors={resp['errors']}")
+            if failed >= 5 and done == 0:
+                sys.exit("\nAborting: the first 5 crises all returned nothing. "
+                         "This is almost certainly a credentials problem, not 104 "
+                         "separate outages — check TAVILY_API_KEY / ACLED_* in .env. "
+                         "No snapshot files were modified.")
+            time.sleep(0.4)
+            continue
+
         with open(path, "w", encoding="utf-8") as f:
             json.dump(resp, f, ensure_ascii=False)
-        if resp["errors"] and not (resp["tavily"] or resp["acled"] or resp["roads"]):
-            failed += 1
-        else:
-            done += 1
+        done += 1
         n_news = len((resp.get("tavily") or {}).get("items") or [])
         n_mon = len((resp.get("acled") or {}).get("months") or [])
         n_road = len((resp.get("roads") or {}).get("items") or [])

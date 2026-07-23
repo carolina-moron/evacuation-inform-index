@@ -1,0 +1,105 @@
+slug,lat,lng,scope,place,basis,confidence
+complex-crisis-in-sudan-sudan,15.9,29.9,country,Sudan — national,INFORM scopes this crisis at country level; point is Sudan's approximate population-weighted centroid,high
+complex-crisis-in-south-sudan-south-sudan,7.3,30.3,country,South Sudan — national,Country-scope crisis; approximate population-weighted centroid,high
+conflict-in-ukraine-ukraine,49.0,31.5,country,Ukraine — national,"Country-scope crisis; approximate population-weighted centroid. Hostilities concentrate in the eastern and southern oblasts (Donetsk, Luhansk, Zaporizhzhia, Kherson, Kharkiv)",high
+complex-crisis-in-yemen-yemen,14.9,44.2,country,Yemen — national,"Country-scope crisis; population-weighted centroid falls in the western highlands (Sana'a–Taiz–Hodeidah axis), where most Yemenis live",high
+complex-crisis-in-afghanistan-afghanistan,34.2,66.5,country,Afghanistan — national,Country-scope crisis; approximate population-weighted centroid,high
+complex-crisis-in-drc-drc,-3.5,22.5,country,DR Congo — national,"Country-scope crisis; approximate population-weighted centroid. Armed conflict concentrates in the east (North & South Kivu, Ituri)",high
+complex-crisis-in-syria-syria,35.2,37.2,country,Syria — national,Country-scope crisis; population-weighted centroid between Aleppo and Homs,high
+complex-crisis-in-myanmar-myanmar,20.0,96.2,country,Myanmar — national,Country-scope crisis; approximate population-weighted centroid on the Yangon–Mandalay axis,high
+complex-crisis-in-haiti-haiti,18.8,-72.4,country,Haiti — national,Country-scope crisis; population-weighted centroid near the Port-au-Prince conurbation,high
+complex-crisis-in-somalia-somalia,4.5,45.0,country,Somalia — national,Country-scope crisis; approximate population-weighted centroid (previous point sat in the far north-east),high
+conflict-in-the-bay-states-nigeria,11.3,12.4,subnational,"Borno, Adamawa & Yobe states (BAY), north-east Nigeria",Centroid of the three named states; the crisis name is explicitly sub-national,high
+conflict-and-climatic-shocks-in-burkina-faso-burkina-faso,12.4,-1.6,country,Burkina Faso — national,Country-scope crisis; approximate population-weighted centroid,high
+conflict-climatic-and-economic-shocks-in-ethiopia-ethiopia,9.5,39.0,country,Ethiopia — national,Country-scope crisis; approximate population-weighted centroid,high
+complex-crisis-in-mali-mali,13.6,-6.3,country,Mali — national,"Country-scope crisis; population-weighted centroid sits in the populated south, not the Saharan geographic centre",high
+conflict-and-climatic-shocks-in-colombia-colombia,4.8,-74.6,country,Colombia — national,Country-scope crisis; approximate population-weighted centroid in the Andean corridor,high
+complex-crisis-in-chad-chad,11.8,16.0,country,Chad — national,"Country-scope crisis; population-weighted centroid in the populated south, not the Saharan geographic centre",high
+conflict-in-gaza-palestine,31.42,34.36,subnational,Gaza Strip,Centroid of the Gaza Strip; the previous point sat ~230 km away in southern Syria,high
+conflict-and-climatic-shocks-in-car-car,5.3,19.0,country,Central African Republic — national,Country-scope crisis; approximate population-weighted centroid,high
+climatic-shocks-in-pakistan-pakistan,29.5,71.0,country,Pakistan — national,Country-scope crisis; approximate population-weighted centroid in the Indus valley,high
+displacement-from-afghanistan-to-iran-iran,33.5,53.0,country,Iran — national (Afghan population dispersed),"Afghan nationals in Iran are dispersed across Tehran, Khorasan Razavi and Sistan-Baluchestan; no single dominant hosting area, so plotted at national scope",medium
+conflict-in-iran-iran,33.5,53.0,country,Iran — national,Country-scope crisis; approximate population-weighted centroid,high
+complex-crisis-in-lebanon-lebanon,33.87,35.65,country,Lebanon — national,Country-scope crisis; population-weighted centroid near Beirut. Previous point sat inside Syria,high
+complex-crisis-in-cameroon-cameroon,5.5,11.8,country,Cameroon — national,Country-scope crisis; approximate population-weighted centroid,high
+political-and-economic-crisis-in-venezuela-venezuela,9.8,-67.5,country,Venezuela — national,Country-scope crisis; population-weighted centroid in the northern coastal belt,high
+displacement-from-sudan-to-south-sudan-south-sudan,11.75,32.78,reception,Renk & Upper Nile transit centres,"Principal entry and transit point for arrivals from Sudan; onward movement to Malakal and Juba",high
+conflict-in-north-west-nigeria-nigeria,12.2,6.2,subnational,"North West Nigeria (Zamfara, Katsina, Sokoto, Kebbi)",Centroid of the named zone,high
+complex-crisis-in-niger-niger,13.6,5.5,country,Niger — national,"Country-scope crisis; population-weighted centroid along the southern Sahel belt, not the Saharan geographic centre",high
+conflict-in-the-west-bank-palestine,31.95,35.25,subnational,West Bank,Centroid of the West Bank,high
+climatic-shocks-and-violence-in-guatemala-guatemala,14.9,-90.5,country,Guatemala — national,Country-scope crisis; approximate population-weighted centroid,high
+conflict-in-north-central-nigeria-nigeria,8.9,8.6,subnational,"North Central Nigeria (Benue, Plateau, Nasarawa, Niger)",Centroid of the named zone; the previous point sat in the north-east,high
+climatic-shocks-in-burundi-burundi,-3.4,29.9,country,Burundi — national,Country-scope crisis; approximate population-weighted centroid,high
+conflict-in-northern-mozambique-mozambique,-12.5,39.4,subnational,Cabo Delgado province,"Centroid of Cabo Delgado, the province named by the crisis; the previous point sat ~800 km south",high
+displacement-from-sudan-to-chad-chad,13.6,22.0,reception,Adré crossing & Ouaddaï / Wadi Fira reception areas,Principal border crossing and camp belt for arrivals from Darfur,high
+conflict-and-violence-in-ecuador-ecuador,-1.2,-79.0,country,Ecuador — national,Country-scope crisis; population-weighted centroid between Quito and Guayaquil,high
+internal-displacement-in-iraq-iraq,33.5,44.0,country,Iraq — national,Country-scope crisis; approximate population-weighted centroid,high
+drought-in-asal-areas-of-kenya-kenya,1.8,38.5,subnational,Arid & semi-arid lands (ASAL) — northern and eastern Kenya,Centroid of the ASAL counties named by the crisis,high
+displacement-from-syria-to-t-rkiye-t-rkiye,39.6,32.0,country,Türkiye — national (Syrian population split),"Syrians under temporary protection are split between Istanbul and the south-eastern border provinces (Gaziantep, Şanlıurfa, Hatay); no single dominant area, so plotted at national scope",medium
+displacement-from-venezuela-to-colombia-colombia,4.8,-74.6,country,Colombia — national (Venezuelan population dispersed),"Venezuelans in Colombia are dispersed across Bogotá, Norte de Santander and the Caribbean coast; plotted at national scope",medium
+climatic-shocks-and-conflict-and-violence-in-honduras-honduras,14.7,-87.5,country,Honduras — national,Country-scope crisis; approximate population-weighted centroid,high
+climatic-shocks-in-malawi-malawi,-14.3,34.3,country,Malawi — national,Country-scope crisis; approximate population-weighted centroid,high
+drought-in-south-west-angola-angola,-15.8,14.5,subnational,"South-west Angola (Cunene, Huíla, Namibe)",Centroid of the named provinces,high
+complex-crisis-in-cuba-cuba,22.4,-80.5,country,Cuba — national,Country-scope crisis; approximate population-weighted centroid,high
+international-displacement-to-ethiopia-ethiopia,9.5,39.0,country,Ethiopia — national (refugee population split),"Refugees in Ethiopia are split between Gambella, the Somali region and Assosa; no single dominant area, so plotted at national scope",medium
+displacement-from-afghanistan-to-pakistan-pakistan,33.0,70.5,reception,Khyber Pakhtunkhwa & northern Balochistan,Main Afghan hosting belt along the western border,high
+conflict-in-lac-province-chad,13.4,14.4,subnational,Lac province (Lake Chad basin),Centroid of the named province; the previous point sat ~660 km north-east,high
+climatic-shocks-and-political-economic-crisis-in-bangladesh-bangladesh,23.9,90.3,country,Bangladesh — national,Country-scope crisis; approximate population-weighted centroid,high
+international-displacement-to-libya-libya,31.5,15.5,country,Libya — national (coastal concentration),"Country-scope crisis; population-weighted centroid falls near the coastal belt where almost all Libyans and migrants are, not the Saharan geographic centre",medium
+displacement-from-sudan-to-libya-libya,24.2,23.3,reception,Kufra & the south-eastern desert entry routes,Principal entry area for arrivals crossing from Sudan,medium
+displacement-of-rohingyas-to-bangladesh-bangladesh,21.2,92.16,reception,Cox's Bazar camps (Kutupalong–Balukhali),World's largest refugee settlement; the previous point sat ~400 km north-west,high
+international-displacement-from-syria-to-lebanon-lebanon,34.1,36.05,reception,Bekaa & Akkar governorates,Largest Syrian hosting areas in Lebanon,high
+cyclone-ditwah-in-sri-lanka-sri-lanka,7.6,80.7,country,Sri Lanka — national,Country-scope crisis; approximate population-weighted centroid. Cyclone landfall area not independently confirmed,medium
+international-displacement-to-yemen-yemen,13.0,44.5,reception,"Aden, Lahj & the Red Sea arrival coast",Main arrival and transit area for migrants crossing from the Horn of Africa,medium
+complex-crisis-in-eritrea-eritrea,15.4,38.9,country,Eritrea — national,Country-scope crisis; approximate population-weighted centroid near Asmara,high
+2026-cyclones-and-rains-in-mozambique-mozambique,-18.0,35.5,country,Mozambique — national,"Country-scope crisis name; approximate population-weighted centroid. Cyclone impacts typically concentrate in the central and northern coastal provinces, but the affected provinces are not named by INFORM",low
+displacement-from-venezuela-to-peru-peru,-11.5,-76.5,country,Peru — national (Lima concentration),"Venezuelans in Peru are heavily concentrated in metropolitan Lima; point is the national population-weighted centroid, which sits near it",medium
+international-displacement-from-syria-to-jordan-jordan,32.2,36.1,reception,"Amman, Irbid & Mafraq (incl. Zaatari and Azraq camps)",Main Syrian hosting areas in Jordan,high
+international-displacement-to-uganda-uganda,3.2,31.3,reception,"West Nile settlements (Bidibidi, Adjumani, Rhino)",Largest refugee-hosting area in Uganda; Nakivale in the south-west also hosts significant numbers,high
+drought-in-southern-madagascar-madagascar,-24.3,45.5,subnational,Grand Sud (southern Madagascar),Centroid of the drought-affected southern regions named by the crisis,high
+international-displacement-to-kenya-kenya,0.06,40.31,reception,Dadaab refugee complex,"Largest single hosting site; Kakuma/Kalobeyei in the north-west and urban Nairobi also host significant populations",medium
+political-and-economic-crisis-in-el-salvador-el-salvador,13.8,-88.9,country,El Salvador — national,Country-scope crisis; approximate population-weighted centroid,high
+international-displacement-to-t-rkiye-t-rkiye,39.6,32.0,country,Türkiye — national,Country-scope crisis; approximate population-weighted centroid,high
+displacement-from-venezuela-to-ecuador-ecuador,-1.2,-79.0,country,Ecuador — national (Venezuelan population dispersed),"Venezuelans in Ecuador are dispersed across Quito, Guayaquil and the northern border; plotted at national scope",medium
+international-displacement-to-egypt-egypt,28.5,30.9,country,Egypt — national (Nile valley),"Country-scope crisis; population-weighted centroid falls in the Nile valley, where essentially the whole population lives",high
+international-displacement-to-mexico-mexico,20.5,-99.9,country,Mexico — national,Country-scope crisis; approximate population-weighted centroid,high
+drought-and-floods-in-tanzania-tanzania,-5.5,35.5,country,Tanzania — national,Country-scope crisis; approximate population-weighted centroid,high
+drought-in-djibouti-djibouti,11.6,43.1,country,Djibouti — national,Country-scope crisis; approximate population-weighted centroid,high
+displacement-from-venezuela-to-brazil-brazil,2.8,-60.7,reception,Roraima (Boa Vista & Pacaraima),"Entry point and main hosting state; the interiorização programme relocates arrivals nationwide",high
+international-displacement-to-algeria-algeria,36.0,3.0,country,Algeria — national (northern coastal belt),"Country-scope crisis; population-weighted centroid falls in the northern coastal belt, not the Saharan geographic centre",high
+displacement-of-sahrawi-refugees-to-tindouf-algeria,27.55,-8.15,subnational,Sahrawi refugee camps near Tindouf,Camp cluster named directly by the crisis; the previous point sat ~800 km north-east,high
+conflict-in-papua-indonesia,-4.0,138.5,subnational,Papua (highland and central Papua provinces),"Centroid of the Papua region named by the crisis; the previous point sat ~2,050 km west in Sulawesi",high
+2026-rainy-and-cyclone-season-in-madagascar-madagascar,-19.0,47.0,country,Madagascar — national,Country-scope crisis; approximate population-weighted centroid,high
+displacement-from-mali-to-mauritania-mauritania,15.8,-5.9,reception,"Mbera camp, Bassikounou (Hodh Ech Chargui)",Sole major hosting site for Malian refugees in Mauritania,high
+climatic-shocks-in-mauritania-mauritania,18.2,-14.5,country,Mauritania — national,Country-scope crisis; approximate population-weighted centroid in the southern populated belt,high
+drought-in-namibia-namibia,-20.5,16.5,country,Namibia — national,Country-scope crisis; population-weighted centroid pulled north by the densely populated Ovambo regions,high
+conflict-in-thailand-thailand,14.5,100.9,country,Thailand — national,Country-scope crisis name; approximate population-weighted centroid. The affected area is not named by INFORM,low
+hurricane-melissa-in-jamaica-jamaica,18.1,-77.3,country,Jamaica — national,Country-scope crisis; approximate population-weighted centroid,high
+displacement-from-venezuela-to-chile-chile,-33.2,-70.9,country,Chile — national (Santiago concentration),Venezuelans in Chile are concentrated in metropolitan Santiago; point is the national population-weighted centroid near it,medium
+floods-in-northern-morocco-morocco,35.0,-5.2,subnational,Northern Morocco (Rif / Tanger-Tétouan-Al Hoceïma),Centroid of the northern region named by the crisis,high
+displacement-from-eastern-drc-burundi,-3.0,29.3,reception,Cibitoke & Rumonge reception sites (western border),Main entry and transit areas for arrivals from South Kivu,medium
+displacement-from-car-to-chad-chad,8.3,17.5,reception,Southern Chad (Logone Oriental & Moyen-Chari),Camp belt hosting refugees from the Central African Republic,high
+international-displacement-to-tanzania-tanzania,-4.3,30.4,reception,"Kigoma region camps (Nyarugusu, Nduta)",Sole major refugee-hosting area in Tanzania,high
+international-displacement-to-djibouti-djibouti,11.2,42.9,reception,"Ali Addeh & Holl-Holl camps, Ali Sabieh",Main refugee-hosting sites in Djibouti,high
+conflict-in-northern-region-of-benin-benin,11.3,2.4,subnational,Northern Benin (Alibori & Atacora),Centroid of the northern departments named by the crisis,high
+floods-in-ecuador-ecuador,-1.2,-79.0,country,Ecuador — national,Country-scope crisis name; approximate population-weighted centroid. The affected provinces are not named by INFORM,low
+international-displacement-from-cameroon-to-nigeria-nigeria,6.8,9.0,reception,"Cross River, Benue, Taraba & Akwa Ibom states (south-east Nigeria)","Hosting states for Cameroonian refugees; the previous point sat in northern Nigeria, on the wrong side of the country",high
+displacement-from-burkina-faso-to-northern-c-te-d-ivoire-c-te-d-ivoire,9.6,-3.5,subnational,"Northern Côte d'Ivoire (Bounkani, Tchologo, Savanes)",Centroid of the northern border region named by the crisis,high
+cyclone-senyar-and-floods-in-indonesia-indonesia,-6.5,108.5,country,Indonesia — national,Country-scope crisis name; approximate population-weighted centroid on Java. The affected provinces are not named by INFORM and were not independently confirmed,low
+international-displacement-to-somalia-somalia,11.28,49.18,reception,Bossaso & the northern arrival ports,Main maritime arrival area for returnees and migrants from Yemen,medium
+international-displacement-to-greece-greece,39.2,26.3,reception,Aegean island reception centres (Lesvos and neighbouring islands),Principal arrival and reception area; Attica also hosts significant numbers,medium
+conflict-in-savanes-region-togo,10.6,0.4,subnational,Savanes region,Centroid of the region named by the crisis,high
+displacement-from-myanmar-to-thailand-thailand,16.9,98.6,reception,"Tak province border camps (Mae La, Umpiem) & Mae Sot",Main hosting area for refugees from Myanmar,high
+2026-floods-in-yemen-yemen,14.9,44.2,country,Yemen — national,Country-scope crisis name; approximate population-weighted centroid. The flood-affected governorates are not named by INFORM,low
+displacement-from-venezuela-to-dominican-republic-dominican-republic,18.8,-70.2,country,Dominican Republic — national,Country-scope crisis; approximate population-weighted centroid,high
+conflict-in-mindanao-philippines,7.4,124.3,subnational,Mindanao (BARMM and central Mindanao),Centroid of the affected area; the previous point sat ~670 km north in Luzon,high
+conflict-in-cambodia-cambodia,12.6,104.9,country,Cambodia — national,Country-scope crisis name; approximate population-weighted centroid. Recent hostilities have concentrated along the northern border with Thailand,low
+international-displacement-to-tunisia-tunisia,35.8,10.0,country,Tunisia — national,"Country-scope crisis; approximate population-weighted centroid. Migrant populations concentrate around Sfax and the central coast",medium
+displacement-from-nicaragua-to-costa-rica-costa-rica,9.9,-84.1,country,Costa Rica — national (San José concentration),Nicaraguans in Costa Rica are concentrated in the San José metropolitan area and the northern border zone,medium
+international-displacement-to-italy-italy,42.8,12.3,country,Italy — national,Country-scope crisis; approximate population-weighted centroid,high
+international-displacement-to-malaysia-malaysia,3.2,101.8,reception,Klang Valley (Kuala Lumpur & Selangor),Where the large majority of refugees and asylum seekers in Malaysia live,high
+displacement-from-venezuela-to-panama-panama,8.5,-77.7,reception,Darién province transit route,Principal transit corridor; Panama City also hosts arrivals,high
+international-displacement-to-spain-spain,40.2,-3.2,country,Spain — national,Country-scope crisis; approximate population-weighted centroid,high
+displacement-from-venezuela-to-costa-rica-costa-rica,9.9,-84.1,country,Costa Rica — national,Country-scope crisis; approximate population-weighted centroid near San José,medium
+international-displacement-to-morocco-morocco,32.9,-7.0,country,Morocco — national,"Country-scope crisis; approximate population-weighted centroid. Migrant populations concentrate around Casablanca, Rabat and the northern border enclaves",medium
+displacement-from-venezuela-to-trinidad-and-tobago-trinidad-and-tobago,10.5,-61.3,country,Trinidad and Tobago — national,Country-scope crisis; approximate population-weighted centroid,high

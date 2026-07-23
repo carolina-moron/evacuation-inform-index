@@ -21,6 +21,42 @@ It is fed by a set of open data sources (see the *Feeds* section of the site),
 with a live backend that pulls news, reported road blockages, and an ACLED
 conflict timeline.
 
+## Scope — what "conflict" means here, and what the index is for
+
+Three definitions of *conflict* run through this model and are deliberately kept
+apart (full treatment: **Methodology → Definitions** on the site, and §4.0 of
+[EII-Paper.md](EII-Paper.md)):
+
+1. **A counted event** — ACLED's six categories, queried unfiltered. But only
+   **monthly fatalities** enter the score, so a month of mass arrests, forced
+   relocation or checkpoint closures with no deaths reads as a quiet month. The
+   ACLED tier used here carries a **~12-month embargo**.
+2. **A crisis driver** — INFORM's labels. Of the 104 crises, 39 are Conflict/
+   Violence; the rest are displacement, flood, drought, cyclone, economic. **All
+   104 are scored with the same formula**; the driver label never enters the
+   arithmetic.
+3. **A legal classification** — IAC / occupation / NIAC / other situations of
+   violence. **Not modelled at all.** This matters because the 75% marker comes
+   from GC IV Art. 49, which governs *occupied territory* and binds an Occupying
+   Power — the index draws that line on every crisis regardless.
+
+**Unit of analysis:** one score per crisis, mostly at country level, refreshed
+monthly. This is a strategic instrument for comparing crises — not a corridor, a
+convoy, or an hour.
+
+**Not fit for:** advising any individual or household whether to leave;
+operational go/no-go; route selection; ranking who evacuates first; any
+determination of legal status; or **justifying a restriction on movement** —
+`EII > 1.0` is not a finding that anyone should be prevented from leaving
+(UDHR Art. 13; ICCPR Art. 12).
+
+The Dimension-3 vulnerability profile (elderly, pregnant, non-ambulatory,
+targeted groups, and eight more) carries its own set of limits — equal ±0.06
+increments, saturation at five factors, and no way to express *impossibility*
+rather than difficulty. See **Limits specific to vulnerable subgroups** in the
+Methodology tab and §9.11 of the paper before reading anything into those
+toggles.
+
 ## Map
 
 The map opens on **high-resolution Esri satellite imagery** (zoomable to ~1 m,
@@ -32,6 +68,52 @@ switches between heatmap, graduated circles, or both.
 One caveat is stated on the map itself: a heatmap blurs between points, so the
 colour *between* two crises is a rendering effect, not a measurement. EII scores
 discrete crises, not a continuous risk surface.
+
+## Where the crises actually are
+
+INFORM publishes no coordinates. The original `data.js` therefore placed every
+crisis at a rounded country centroid — and, where one country carried several
+crises, at that centroid plus a ~0.9° offset so the markers would not overlap.
+About three quarters of the points were somewhere the crisis is not: Gaza in
+southern Syria (230 km), Cabo Delgado 800 km south of itself, Papua 2,054 km
+west in Sulawesi. That is not only a cosmetic problem — the route weather, the
+satellite zoom and the road-access search are all anchored to these coordinates.
+
+Every crisis now has a curated location in **[`geo/locations.csv`](geo/locations.csv)**,
+and the map states what each point represents rather than implying precision it
+does not have:
+
+| Scope | What the point is | Count |
+|---|---|---|
+| **Sub-national** | The crisis names an area; point is that area's centroid | 17 |
+| **Reception** | Displacement concentrated in known hosting/transit areas; point is the main one, named | 22 |
+| **Country** | The crisis is national in scope; point is the country's approximate **population-weighted** centroid | 65 |
+
+Population-weighted, not geographic: for Libya, Algeria, Mali, Chad, Niger,
+Mauritania and Egypt the two are hundreds of kilometres apart, and the
+geographic centre is empty desert. Each row also carries a `confidence` value —
+`low` marks the six crises whose name is national but whose impact is almost
+certainly localised, where INFORM names no affected area and a more precise
+point could not be assigned without inventing one. Those crises say so in the UI.
+
+The ~0.9° anti-overlap offset is gone. Where several crises genuinely share a
+country-level point (Ecuador has three), the map draws **one marker listing all
+of them** instead of moving them ~100 km apart to solve a rendering problem.
+
+```bash
+python3 geo/build_geo.py           # validate locations.csv and rebuild geo.js
+python3 geo/build_geo.py --check   # validate only
+```
+
+The build fails if any crisis is unlocated, any scope or confidence value is
+unrecognised, or any point falls outside its own country's bounding box — the
+guard that would have caught Gaza-in-Syria. `data.js` keeps its original
+coordinates as the untouched INFORM export; `geo.js` is generated and overrides
+them at load.
+
+The curated place names also sharpen the live searches: Tavily is now queried
+for "Cabo Delgado province, Mozambique" rather than "northern Mozambique", which
+is how the reporting is actually written.
 
 ## Road access
 
@@ -97,7 +179,10 @@ blocked routes lower feasibility.
 ## Files
 
 - `index.html` — the dashboard UI
-- `data.js` — index data and weights
+- `data.js` — index data and weights (its `lat`/`lng` are superseded by `geo.js`)
+- `geo/locations.csv` — curated location, scope and confidence for all 104 crises
+- `geo/build_geo.py` — validates that table and generates `geo.js`
+- `geo.js` — generated; the coordinates the map actually uses
 - `server.py` — live backend (news + ACLED timeline, cached)
 - `snapshot.py` — bakes the static snapshot the hosted site falls back to
 - `snapshot/` — pre-generated per-crisis JSON served on GitHub Pages
