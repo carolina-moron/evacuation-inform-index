@@ -82,6 +82,56 @@ Both are rescaled from the INFORM ten point scale to the five point scale the EI
 
 The choice is defensible on its face. Complexity in INFORM measures precisely the conditions that obstruct movement: humanitarian access, safety of operations, and the operating environment. It is nonetheless a substitution, and the prototype labels it as one.
 
+### 4.2a Where the proxy breaks: an examination of the substitution
+
+Labelling the substitution is not the same as testing it, and the peer review is right that this is the load-bearing validity question for the whole instrument. This section examines it against the live April 2026 dataset of 104 crises.
+
+**The two dimensions are related but far from interchangeable.** Across the 104 crises the correlation between Conditions (RSS) and Complexity (RSE) is **r = 0.62**. That is a real association, but it leaves well over half the variance unshared. Complexity is not a noisy copy of Conditions; it is a different measurement, and the EII's whole output is the ratio between them.
+
+**The direction of the bias is specific: Complexity is a property of the country, not of the crisis.** INFORM Complexity scores the operating environment responders face — access constraints, safety of operations, the wider society and security picture. Those are largely national and largely driven by conflict. Conditions, by contrast, tracks the affected population of *this* crisis. When a low-intensity crisis occurs inside a high-conflict country, the two come apart hard, and the EII reads that gap as a statement about civilian evacuation when it is a statement about aid delivery.
+
+*The clearest case in the dataset is Yemen, which appears three times:*
+
+| Yemen crisis | Severity | RSS (Conditions) | RSE (Complexity) | EDI |
+|---|---|---|---|---|
+| Complex crisis in Yemen | 5 | 4.56 | 4.69 | 1.03 |
+| International Displacement to Yemen | 4 | 2.78 | 3.76 | 1.35 |
+| **2026 Floods in Yemen** | **3** | **1.36** | **3.53** | **2.60** |
+
+The floods entry carries **the highest EDI in the entire index, 2.60** — the index's strongest possible statement that leaving is more dangerous than staying. But it earns that score by combining the *lowest* Conditions score in the dataset (1.36, because a flood's effect on the affected population is moderate) with a Complexity score of 3.53 that reflects Yemen's war. A family deciding whether to move away from floodwater is not facing 3.53-worth of evacuation danger from the flood; the score is picking up the constraints that make it hard for *agencies* to reach them. The number is real, the inputs are real, and the interpretation the index invites is wrong.
+
+*The favourable case runs the other way.* Bangladesh's climatic-shocks crisis scores RSS 4.11 against RSE 2.07, an EDI of 0.50 — strongly "staying is riskier." Here the proxy happens to land well: Bangladesh's low Complexity reflects a functioning, well-rehearsed disaster-response system, and its cyclone-shelter evacuation programme genuinely is among the safest mass movements in the world. The mapping works when the crisis type and the country's operating environment share a cause. It fails when they do not.
+
+**Expected direction of bias, stated plainly.** The proxy will *overstate* evacuation risk for lower-intensity crises inside conflict-affected states — floods, displacement inflows, and disease outbreaks in countries such as Yemen, Somalia, or Mali — because national conflict conditions inflate Complexity independently of the hazard being scored. It will *understate* evacuation risk where a specific corridor is dangerous but the national operating environment is permissive, since Complexity has no corridor-level resolution at all.
+
+**A third finding, which the review did not anticipate: the ratio is least informative where the stakes are highest.** Across the seventeen severity-5 crises, EDI ranges only from 0.83 (Colombia) to 1.13 (Myanmar), clustering tightly around 1.0 — Somalia, Burkina Faso and Mali all sit at exactly 1.00. In the most severe crises, Conditions and Complexity are both near the top of the scale, so their ratio collapses toward unity and discriminates almost nothing. Every large EDI value in the index comes from a low- or mid-severity crisis. The headline metric is therefore most confident precisely where it is least meaningful, which is a strong argument for the two-component display over the ratio.
+
+**On the 0.5 denominator floor.** The review asks for a sensitivity check. On the current dataset the floor is **inert: zero of 104 crises have RSS below 0.5**, and the observed minimum is 1.36. The safeguard is therefore not distorting any published figure, though it remains untested rather than validated, and would begin to bite only if the index were extended to very low-severity situations.
+
+**Why the substitution is still worth keeping, for now.** No public dataset scores civilian-evacuation difficulty at crisis level across 104 crises; building one is the work described in section 11. Complexity is the closest available construct with real coverage, real provenance, and a published methodology. The defensible position is to keep it, name it as a proxy at every point of use, and read the EDI as a *screening prompt* rather than a measurement — with the explicit caveat that low-intensity crises in high-conflict states will be systematically flagged as dangerous to leave for reasons that have nothing to do with the hazard.
+
+### 4.2b A worked example, end to end
+
+The review notes that the index is described but never run. Two crises, taken from the live April 2026 data.
+
+**Sudan — Complex crisis.** INFORM severity 5, INFORM index 9.6.
+
+1. INFORM Conditions of affected people = 4.87 on the rescaled five-point scale → **RSS = 4.87**.
+2. INFORM Complexity = 4.73 → **RSE = 4.73**.
+3. Denominator floor check: RSS 4.87 ≥ 0.5, so the floor does not engage.
+4. **EDI = RSE / RSS = 4.73 / 4.87 = 0.97**.
+
+*Reading it:* both components are near the ceiling, so the index is saying that staying and leaving are both close to maximally bad, and that on these measures leaving is marginally the less bad of the two. The ratio's proximity to 1.0 carries little information; the pair (4.87, 4.73) carries most of it. This is exactly the compression described above, and it is why the tool displays both components rather than the ratio alone.
+
+**2026 Floods in Yemen.** INFORM severity 3, INFORM index 4.2.
+
+1. INFORM Conditions = 1.36 → **RSS = 1.36** (the lowest in the dataset).
+2. INFORM Complexity = 3.53 → **RSE = 3.53**.
+3. Floor check: 1.36 ≥ 0.5, floor does not engage.
+4. **EDI = 3.53 / 1.36 = 2.60** — the highest in the index.
+
+*Reading it:* taken at face value the index says evacuation is two and a half times riskier than remaining. Taken correctly, it says the affected population's conditions are relatively mild while the operating environment in Yemen is severe — and the latter is a fact about the war, not about the flood. This is the single case a user is most likely to misread, and it is the reason 4.2a exists.
+
 ### 4.3 The three layer architecture
 
 The fuller design, of which the live build implements the first layer, divides the problem into three:
@@ -116,6 +166,8 @@ This is the same non compensatory logic used by the Human Development Index and 
 |---|---|---|
 | Endangerment | How dangerous is it to stay? | INFORM Conditions expressed as a percentage, with a 75 per cent obligation threshold marked, and a trajectory drawn from recent ACLED fatality trends |
 | Feasibility | Can civilians realistically move? | INFORM Complexity inverted and expressed as a percentage, reduced by live route weather from Open-Meteo |
+
+Note that Feasibility and the Risk Score for Evacuating are **the same quantity under two names**, pointing in opposite directions: 4.2 maps Complexity onto RSE so that higher Complexity means higher evacuation risk, while this table inverts Complexity so that higher Complexity means lower feasibility. Both are internally consistent and they do not contradict each other arithmetically -- high evacuation risk and low feasibility are the same claim -- but presenting them as two separate concepts implies the tool has two independent readings of movement when it has one. They share a single input, INFORM Complexity, and therefore share every limitation set out in 4.2a. A future version should either derive Feasibility from an independent source or collapse the two into one reported quantity.
 | Protection gap flag | Where is escalation needed? | Raised when endangerment is at or above 75 per cent while feasibility is at or below 40 per cent |
 
 5.4 Endangerment is banded for readability: manageable, elevated, severe, extreme, and critical, with critical reserved for scores at or above 90 per cent.
