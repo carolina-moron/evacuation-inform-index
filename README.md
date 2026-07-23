@@ -171,8 +171,8 @@ Coverage is the part that matters, and the layer states it:
 
 | | crises |
 |---|---:|
-| Searched, reports found (pinned) | 11 |
-| Searched, nothing found | 31 |
+| Searched, reports found (pinned) | 8 |
+| Searched, nothing found | 34 |
 | **Never searched** | **62** |
 | Total | 104 |
 
@@ -181,6 +181,11 @@ An unpinned crisis is therefore ambiguous between *searched, nothing found* and
 reading — no pin, roads fine — is the dangerous one. Run
 `python3 snapshot_roads.py` to close the gap (1 Tavily credit per crisis), then
 re-run `python3 build_roads_layer.py` and commit `snapshot/`.
+
+**What the layer still gets wrong** is written down rather than left implicit:
+stale items shown under a "last 60 days" label, unchecked source quality, wire
+copy counted twice where it was re-headlined, and items that are not about roads
+at all. See **[BACKLOG.md](BACKLOG.md)**.
 
 ## Running locally
 
@@ -241,6 +246,8 @@ blocked routes lower feasibility.
 - `build_roads_layer.py` — flattens those road blocks into `snapshot/roads.json`
 - `snapshot/` — pre-generated per-crisis JSON served on GitHub Pages
 - `acled-api/` — ACLED helper script
+- `rescore_roads.py` — re-applies the road gates to baked snapshots, offline
+- `BACKLOG.md` — known gaps, why each matters, and what closing it would take
 - `INTEGRATIONS.md` — every external API, how it is called, and how to debug it
 - `HASTE_SETUP.md` — how to run Microsoft HASTE and overlay its damage tiles
 - `EII-Paper.md` — plain-language research report on what the index does
