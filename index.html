@@ -38,6 +38,12 @@
   .legend .gradbar{width:170px;height:11px;border-radius:6px;border:1px solid var(--line);margin:2px 0 3px}
   .legend .gradends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);line-height:1.3}
   .legend .legnote{margin-top:5px;font-size:11px;color:var(--muted);max-width:190px;line-height:1.4}
+  /* Size key: hollow dots, so the swatch reads as size only and cannot be
+     mistaken for a value on the colour ramp above it. */
+  .legend .sizelegend{margin-top:8px;padding-top:7px;border-top:1px solid var(--line)}
+  .legend .sizerow{display:flex;align-items:flex-end;gap:12px;line-height:1;padding:3px 0 1px}
+  .legend .sizekey{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
+  .legend .sizekey i{margin:0;background:transparent;border:1.5px solid var(--navy2);flex:none}
   .controls select+label{margin-top:10px}
   /* Scroll rather than overflow the map: this panel grew past short viewports. */
   .controls{top:14px;right:14px;padding:10px 12px;max-width:230px;max-height:calc(100% - 28px);overflow-y:auto;overscroll-behavior:contain}
@@ -49,6 +55,7 @@
   .lp table{border-collapse:collapse;width:100%;font-size:12px;margin-top:4px}
   .lp td{padding:2px 6px;border-top:1px solid #eee}
   .lp td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+  .lp .lp-sizenote{color:var(--muted);font-size:10.5px}
   .pill{display:inline-block;padding:1px 8px;border-radius:10px;color:#fff;font-size:11px;font-weight:700}
   /* What a map point actually represents — a named area, a hosting site, or a
      whole-country stand-in. Colour-coded so precision is legible at a glance. */
@@ -346,7 +353,7 @@
       <select id="display">
         <option value="heat">Heatmap</option>
         <option value="circles">Graduated circles</option>
-        <option value="both">Heatmap + circles</option>
+        <option value="both" selected>Heatmap + circles</option>
       </select>
       <label for="typeFilter" id="typeFilterLbl">Crisis type</label>
       <div class="typef" id="typeFilter"></div>
@@ -1159,6 +1166,21 @@ const LABELS={edi:"EII (evacuate ÷ stay)", rss:"Risk of Staying", rse:"Risk of 
 
 function metricVal(d,m){ return m==="edi"?edi(d):d[m]; }
 
+/* ---------- Marker size = INFORM Severity ----------
+   Severity is an ordinal 1–5 class, not a continuous score, so the radius steps
+   with it rather than interpolating something the source never measured. The
+   scale is fixed at the full 1–5 range, not the range present in the data, so a
+   filtered map does not silently re-scale its own dots. Anything without a
+   severity class falls back to the smallest radius and says so in the popup —
+   drawing an unknown at mid-size would invent a class for it. */
+const SEV_RANGE=[1,5];      // INFORM Severity class bounds
+const SEV_R=[7,20];         // px radius at class 1 and class 5
+function sevVal(d){ const v=+d.sev; return Number.isFinite(v)?Math.max(SEV_RANGE[0],Math.min(SEV_RANGE[1],v)):SEV_RANGE[0]; }
+function sevRadius(sev){
+  const s=(sev-SEV_RANGE[0])/(SEV_RANGE[1]-SEV_RANGE[0]);
+  return SEV_R[0]+s*(SEV_R[1]-SEV_R[0]);
+}
+
 /* ---------- Crisis-type filter ----------
    INFORM's driver list is truncated at 60 characters in the export, so the raw
    strings arrive cut mid-word: "Political/econom", "Drought/", "Internat",
@@ -1261,7 +1283,7 @@ function popupCard(d,idx,metric){
       <tr><td>Risk of Staying (RSS) &mdash; Conditions</td><td>${d.rss.toFixed(1)}</td></tr>
       <tr><td>Impact of crisis</td><td>${d.impact?d.impact.toFixed(1):'—'}</td></tr>
       <tr><td>INFORM Severity (1&ndash;10)</td><td>${d.informIdx}</td></tr>
-      <tr><td>Severity category / trend</td><td>${d.sev} · ${d.trend||'—'}</td></tr>
+      <tr><td>Severity category / trend <span class="lp-sizenote">(marker size)</span></td><td>${Number.isFinite(+d.sev)?`${d.sev} of 5`:'not classified — drawn at smallest size'} · ${d.trend||'—'}</td></tr>
     </table>
     <p style="margin:8px 0 0;font-size:11.5px;color:#5b6b7a"><b>Drivers:</b> ${esc(d.driverNames.join(' · ')||'—')}</p>
     <button type="button" class="detailbtn" onclick="inspectImagery(${d.lat},${d.lng})">🔍 Zoom high-res satellite imagery</button>
@@ -1292,16 +1314,20 @@ function draw(metric,mode){
     heatPts.push([d.lat,d.lng,HEAT_MIN_INTENSITY+(1-HEAT_MIN_INTENSITY)*t]);
   });
   groups.forEach(members=>{
-    // Colour and size a shared marker by its strongest member, so a cluster
-    // never reads as calmer than the worst crisis inside it.
+    // Colour a shared marker by its strongest member, so a cluster never reads
+    // as calmer than the worst crisis inside it.
     const top=members.reduce((a,b)=>metricVal(b.d,metric)>metricVal(a.d,metric)?b:a);
     const v=metricVal(top.d,metric);
-    const t=Math.max(0,Math.min(1,(v-mn)/(mx-mn)));
     const col=ramp(v,mn,mx);
     const {d}=top;
+    // Size carries INFORM Severity (1–5), a separate variable from the colour
+    // metric — the two used to encode the same number twice, which spent the
+    // size channel on nothing. Size a cluster by its most severe member for the
+    // same reason the colour uses the worst one.
+    const sev=Math.max(...members.map(m=>sevVal(m.d)));
     // In heat-only mode the dots shrink to plain click targets — the heat
-    // carries the value, so sizing them by it too would double-encode.
-    const r=(showCircles ? 8+t*14 : 5)+(members.length>1?2:0);
+    // carries the metric, and a legend-less size scale there would mislead.
+    const r=(showCircles ? sevRadius(sev) : 5)+(members.length>1?2:0);
     const m=L.circleMarker([d.lat,d.lng],showCircles
       ? {radius:r,fillColor:col,color:'#fff',weight:members.length>1?2.5:1.5,fillOpacity:.88}
       : {radius:r,fillColor:'#0b2545',color:'#fff',weight:members.length>1?2.5:1.5,fillOpacity:.9});
@@ -1309,7 +1335,10 @@ function draw(metric,mode){
       ? `<div class="multi">${members.length} crises are scored at this location</div>` : '';
     m.bindPopup(hd+members.map(({d,idx})=>popupCard(d,idx,metric)).join('<hr class="lpsep">'),
                 {maxHeight:420});
-    if(members.length>1) m.bindTooltip(`${members.length} crises`,{direction:'top'});
+    // The size of a cluster's dot is its worst member's, not the group's — say so
+    // on hover, or a big dot reads as "several crises" rather than "one severe one".
+    if(members.length>1) m.bindTooltip(`${members.length} crises · sized by the most severe (${sev} of 5)`,{direction:'top'});
+    else if(showCircles) m.bindTooltip(`${esc(d.crisis||d.name)} · severity ${sev} of 5`,{direction:'top'});
     layer.addLayer(m);
   });
   heatLayer.setLatLngs(showHeat?heatPts:[]);
@@ -1336,6 +1365,15 @@ function drawLegend(metric,mode){
     }
   }
   if(metric==='edi') html+=`<div class="legnote">&gt;1 stay riskier · &lt;1 evacuate riskier</div>`;
+  // Size is a second variable, so it needs its own key — an unexplained size
+  // scale reads as decoration, or worse, as more of the colour metric.
+  if(mode!=='heat'){
+    const keys=[1,3,5].map(sv=>{
+      const px=Math.round(sevRadius(sv)*2);
+      return `<span class="sizekey"><i style="width:${px}px;height:${px}px"></i>${sv}</span>`;
+    }).join('');
+    html+=`<div class="sizelegend"><b>Marker size — INFORM Severity</b><div class="sizerow">${keys}</div></div>`;
+  }
   // A filtered map that does not say it is filtered is a map that lies by omission.
   const shown=visibleLocs().length;
   if(shown<LOCS.length){

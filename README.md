@@ -63,7 +63,14 @@ The map opens on **high-resolution Esri satellite imagery** (zoomable to ~1 m,
 with a transparent place-name layer on top) and renders crises as a **heatmap**
 of the selected metric. Crisis dots stay on top of the heat as click targets —
 the heat carries the value, the dots carry the data. A *Display as* control
-switches between heatmap, graduated circles, or both.
+switches between heatmap, graduated circles, or both; it opens on both.
+
+**Colour and size are two different variables.** Dot colour is the metric you
+select; dot radius is the crisis's **INFORM Severity class (1–5)**, on a fixed
+1–5 scale so filtering the map never re-scales the dots. Where several crises
+share one point, the dot takes the highest severity among them, matching the
+rule the colour already follows. A crisis with no severity class draws at the
+smallest size and says so in its popup.
 
 One caveat is stated on the map itself: a heatmap blurs between points, so the
 colour *between* two crises is a rendering effect, not a measurement. EII scores
