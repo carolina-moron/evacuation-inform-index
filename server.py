@@ -218,7 +218,17 @@ NON_ROAD_SUBJECT = (r"\bnaval\b|\bmaritime\b|\bshipping\b|\bvessel(s)?\b|\btanke
                     r"\bport(s)?\b|\bharbou?r(s)?\b|\bsea ?lane(s)?\b|\bairspace\b|"
                     r"\bflight(s)?\b|\bairport(s)?\b|\bairline(s)?\b|\bstrait(s)?\b|"
                     r"\bcanal\b|\bwaterway(s)?\b|\bgulf\b|\bred sea\b|\bhormuz\b|"
-                    r"\brunway(s)?\b|\bferry\b|\bferries\b")
+                    r"\brunway(s)?\b|\bferry\b|\bferries\b|"
+                    # Trade-route language is about freight moving between
+                    # countries, not civilians driving out of one. The Houthi
+                    # "declared blockade of Saudi Arabia" reporting names no
+                    # maritime noun in the first 260 characters, so the nouns
+                    # above never fire and a sea blockade scored as two blocked
+                    # roads in Yemen. These phrases are what such a story always
+                    # carries instead.
+                    r"\bchoke ?point(s)?\b|\btrade route(s)?\b|\btrade\b|"
+                    r"\bexport(s|ed|ing)?\b|\bimport(s|ed|ing)?\b|\bcargo\b|"
+                    r"\bfreight\b|\bcommercial traffic\b")
 # Words that carry no geographic signal, so they must not satisfy the place gate.
 _PLACE_STOPWORDS = {
     "republic", "democratic", "state", "states", "islamic", "federal", "united",
@@ -226,6 +236,24 @@ _PLACE_STOPWORDS = {
     "region", "north", "south", "east", "west", "northern", "southern",
     "eastern", "western", "central", "greater", "new", "city", "district",
 }
+
+# A word that is some *other* country's entire name cannot identify this one.
+# Splitting "South Sudan" on whitespace leaves {"sudan"} once the direction word
+# is dropped as a stopword, and every Sudan story was consequently pinned on
+# South Sudan as well — including the el-Obeid encirclement, which is 800 km
+# inside Sudan. Multi-word names keep the full phrase instead.
+_OTHER_COUNTRY_WORDS = {"sudan", "congo", "guinea", "korea", "niger", "china"}
+
+# Demonyms and plurals a country name takes in prose. Matching has to reach
+# "Yemeni" from "Yemen" and "Sudanese" from "Sudan", which is why the tokens
+# were substring-matched in the first place — but bare substring matching also
+# reaches "Nigeria" from "Niger", and an IOM plan for Nigeria became Niger's
+# only checkpoint report. Anchoring the front of the token and allowing only
+# these endings keeps the demonyms and rejects the neighbour.
+#   -ian/-ians are deliberately absent: they would readmit "Nigerian" for Niger,
+#   and country names ending in -ia ("Ethiopia" -> "Ethiopian") are already
+#   covered by the plain -n ending.
+_DEMONYM_SUFFIX = r"(i|is|s|n|ns|an|ans|ese|na|ien|iens)?"
 
 # Country names in the INFORM data are not the names reporters use. Two failure
 # modes both need fixing here:
@@ -266,26 +294,106 @@ PLACE_ALIASES = {
     "Cameroon": ("cameroon", "yaounde", "douala", "far north"),
 }
 
+# Sub-national crises need the same treatment one level down. A curated place
+# label names the theatre ("Mindanao (BARMM and central Mindanao)") but not the
+# towns reporters actually file from, and the country name is far too coarse to
+# stand in: three copies of a hotel collapsing in Angeles City, Pampanga —
+# northern Luzon, ~900 km away — were the largest contributor to the Mindanao
+# obstruction signal, purely because the word "Philippines" appears in them.
+# Keyed by a lowercase substring of the place label in geo/locations.csv.
+# Extend as sub-national crises acquire road reports; an absent entry simply
+# falls back to the words in the place label itself.
+SUBPLACE_ALIASES = {
+    "mindanao": ("mindanao", "barmm", "cotabato", "maguindanao", "marawi",
+                 "lanao", "zamboanga", "davao", "general santos", "sultan kudarat",
+                 "sulu", "basilan", "tawi-tawi", "surigao"),
+    "gaza": ("gaza", "rafah", "khan younis", "deir al-balah", "jabalia"),
+    "west bank": ("west bank", "jenin", "nablus", "hebron", "ramallah", "tulkarem"),
+    "cabo delgado": ("cabo delgado", "pemba", "mocimboa", "palma", "macomia"),
+    "cox's bazar": ("cox's bazar", "coxs bazar", "kutupalong", "balukhali", "teknaf"),
+    "darién": ("darien", "darién", "bajo chiquito", "canaan membrillo"),
+}
+
+
+def _tok_pattern(tok):
+    """A place token as a regex: anchored at a word start, demonyms allowed.
+
+    Multi-word tokens ("south sudan", "general santos") are matched literally —
+    the ambiguity this guards against only arises for single words.
+    """
+    if " " in tok or "-" in tok or "'" in tok:
+        return r"\b" + re.escape(tok)
+    return r"\b" + re.escape(tok) + _DEMONYM_SUFFIX + r"\b"
+
+
+def _match_tokens(text, toks):
+    """True if any token identifies `text` as being about that place."""
+    return any(re.search(_tok_pattern(tok), text) for tok in toks)
+
+
+def _words_of(src):
+    """Significant lowercase words in a place or country name."""
+    return [t for t in re.split(r"[^a-z']+", (src or "").lower())
+            if len(t) >= 4 and t not in _PLACE_STOPWORDS]
+
+
+def _all_words_of(src):
+    """Every word of a name, stopwords kept.
+
+    The significant-words filter is right for picking out individual tokens and
+    wrong for rebuilding the name: "South Sudan" loses its direction word and
+    collapses to "Sudan", which is the whole reason Sudan's news reached South
+    Sudan's pin. The full phrase has to be assembled before that filter runs.
+    """
+    return [t for t in re.split(r"[^a-z']+", (src or "").lower()) if len(t) >= 3]
+
+
 def _place_tokens(country, place=None):
     """Distinctive lowercase terms that mark an item as being about this crisis.
 
     "Democratic Republic of Congo" reduces to {"congo"}; the generic half would
-    otherwise match any story containing the word "republic". Substring matching
-    also catches the demonym, so "yemen" matches "Yemeni".
+    otherwise match any story containing the word "republic". Tokens are matched
+    with _tok_pattern, which reaches the demonym ("Yemen" -> "Yemeni") without
+    reaching the neighbour ("Niger" -> "Nigeria").
+
+    A multi-word country name keeps the whole phrase and drops any single word
+    that is another country's name outright, so "South Sudan" no longer answers
+    to plain "Sudan".
 
     Returns an empty set only when nothing usable can be derived, and callers
     treat that as "cannot verify location" rather than "location verified".
     """
     toks = set()
-    for src in (country, place):
-        if not src:
-            continue
-        for t in re.split(r"[^a-z]+", src.lower()):
-            if len(t) >= 4 and t not in _PLACE_STOPWORDS:
-                toks.add(t)
+    full = _all_words_of(country)
+    if len(full) > 1:
+        toks.add(" ".join(full))
+        toks.update(w for w in _words_of(country) if w not in _OTHER_COUNTRY_WORDS)
+    else:
+        toks.update(_words_of(country))
+    toks.update(_place_only_tokens(country, place))
     for alias in PLACE_ALIASES.get(country, ()):
         toks.add(alias.lower())
     return toks
+
+
+def _place_only_tokens(country, place=None):
+    """Tokens that identify the sub-national area *and not merely the country*.
+
+    The country's own words are removed: a place label routinely repeats them
+    ("Borno, Adamawa & Yobe states (BAY), north-east Nigeria"), and leaving
+    "nigeria" in would make the sub-national gate no stricter than the country
+    one it exists to tighten.
+    """
+    if not place:
+        return set()
+    toks = {w for w in _words_of(place)}
+    low = place.lower()
+    for key, aliases in SUBPLACE_ALIASES.items():
+        if key in low:
+            toks.update(a.lower() for a in aliases)
+    country_words = set(_words_of(country)) | {
+        a.lower() for a in PLACE_ALIASES.get(country, ())}
+    return {t for t in toks if t not in country_words}
 
 def road_item_is_relevant(text, country, place=None):
     """True if this item is plausibly about land access *in this crisis's area*.
@@ -306,6 +414,15 @@ def road_item_is_relevant(text, country, place=None):
             r"\bland route(s)?\b|\boverland\b|\bconvoy(s)?\b|\bbesieg|\bsiege\b|"
             r"\bencircl", t):
         return False
+    # A crisis with a curated sub-national area has to be matched at that level.
+    # Its reporting is about one theatre inside the country, so the country name
+    # alone confirms nothing: "Philippines" is true of a Luzon building collapse
+    # and of a Mindanao earthquake alike, and the map cannot tell them apart on
+    # that evidence. Under-counting here is the safer error — the UI already
+    # says plainly that an absent report is not an all-clear.
+    if place:
+        sub = _place_only_tokens(country, place)
+        return bool(sub) and _match_tokens(t, sub)
     toks = _place_tokens(country, place)
     if not toks:
         # No way to confirm the item is about this crisis. Returning True here
@@ -313,7 +430,27 @@ def road_item_is_relevant(text, country, place=None):
         # at maximum obstruction off unrelated news. A missing blockage report
         # is visibly labelled as such in the UI; a fabricated one is not.
         return False
-    return any(tok in t for tok in toks)
+    return _match_tokens(t, toks)
+
+# "no immediate reports of damages", "no damage reported", "without damage" —
+# an earthquake story whose whole point is that nothing broke matched \bdamag\b
+# and became Guatemala's only road-damage report. The negation has to be read,
+# not just the keyword.
+NEGATED_DAMAGE = (r"\bno (immediate )?(reports? of )?(major |serious |significant )?"
+                  r"(damage|damages|casualties)\b|"
+                  r"\bwithout (major |serious )?damage\b|"
+                  r"\bno damage (was |were )?(reported|recorded)\b|"
+                  r"\bdamage (was |were )?not reported\b")
+# `reopened` subtracts from the obstruction signal, so a false positive there is
+# worse than a missed one: it argues that routes have opened. "schools were
+# reopening after a long break" is not a road reopening, and it discounted the
+# Mindanao earthquake by half a point. Require the reopening to be predicated of
+# something people travel on.
+REOPEN_SUBJECT = (r"\broad(s|way|ways)?\b|\bhighway(s)?\b|\bbridge(s)?\b|"
+                  r"\broute(s)?\b|\bcorridor(s)?\b|\bcrossing(s)?\b|\bborder(s)?\b|"
+                  r"\bport(s)?\b|\bpass(es)?\b|\baccess\b|\btraffic\b|\bconvoy(s)?\b|"
+                  r"\bsupply line(s)?\b|\bcheckpoint(s)?\b")
+
 
 def classify_road(text):
     """Return (primary_status, all_matched_tags) for one news item.
@@ -322,9 +459,17 @@ def classify_road(text):
     directions, so every match is kept in `tags` and the caller can see the
     ambiguity. `status` prefers the obstruction reading, because under-calling a
     blocked route is the more dangerous error for an evacuation tool to make.
+
+    Two patterns are qualified rather than taken at face value: `damaged` is
+    dropped where the text negates the damage, and `reopened` is dropped unless
+    something traversable is what reopened.
     """
     t = (text or "").lower()
     tags = [name for name, pat in ROAD_PATTERNS if re.search(pat, t)]
+    if "damaged" in tags and re.search(NEGATED_DAMAGE, t):
+        tags.remove("damaged")
+    if "reopened" in tags and not re.search(REOPEN_SUBJECT, t):
+        tags.remove("reopened")
     for name in ("blocked", "damaged", "checkpoint", "reopened"):
         if name in tags:
             return name, tags
@@ -341,12 +486,57 @@ def crisis_query(country, crisis, place=None):
     """
     return f"{place}, {country} {crisis}" if place else f"{country} {crisis}"
 
+# Words too common to distinguish one story from another when comparing headlines.
+_HEADLINE_STOPWORDS = {
+    "the", "a", "an", "and", "or", "of", "in", "on", "at", "to", "for", "from",
+    "as", "by", "with", "into", "after", "amid", "over", "still", "says", "say",
+    "new", "more", "than", "that", "this", "it", "its", "is", "are", "was",
+    "were", "be", "been", "has", "have", "had", "will", "could", "would",
+}
+
+
+def _headline_key(title):
+    """Content words of a headline, with the syndicating outlet's suffix removed.
+
+    Tavily returns wire copy once per outlet that ran it. "3 dead, 17 mostly
+    workers still missing in collapse of unfinished hotel in Philippines - The
+    Sun Chronicle" and the "4 dead" revision of the same story are one report,
+    and counting them separately trebled a single building collapse.
+    """
+    t = (title or "").lower()
+    t = re.sub(r"\s+[-–|]\s+[^-–|]{1,40}$", "", t)      # trailing " - Outlet"
+    words = [w for w in re.split(r"[^a-z0-9']+", t)
+             if w and w not in _HEADLINE_STOPWORDS]
+    return set(words)
+
+
+def _is_duplicate(item, kept):
+    """True if `item` reports the same story as something already kept.
+
+    Exact URL first, then headline overlap. The threshold is deliberately high:
+    merging two genuinely distinct blockages would understate obstruction, which
+    is the error this tool must not make.
+    """
+    url = (item.get("url") or "").split("?")[0].rstrip("/")
+    key = _headline_key(item.get("title"))
+    for k in kept:
+        if url and url == (k.get("url") or "").split("?")[0].rstrip("/"):
+            return True
+        other = _headline_key(k.get("title"))
+        if not key or not other:
+            continue
+        overlap = len(key & other) / len(key | other)
+        if overlap >= 0.75:
+            return True
+    return False
+
+
 def tavily_roads(key, country, crisis, days=60, max_results=10, place=None):
     """Road-access items for one crisis, classified and scored."""
     news = tavily_news(key, f"{crisis_query(country, crisis, place)} {ROAD_QUERY}",
                        days=days, max_results=max_results)
     items, counts = [], {"blocked": 0, "damaged": 0, "checkpoint": 0, "reopened": 0}
-    dropped = 0
+    dropped = duplicates = 0
     for it in news["items"]:
         blob = f"{it.get('title','')} {it.get('snippet','')}"
         # Relevance first: an item about another country, or about shipping
@@ -357,13 +547,18 @@ def tavily_roads(key, country, crisis, days=60, max_results=10, place=None):
         status, tags = classify_road(blob)
         if status == "unclear":
             continue                       # no road language at all — drop the noise
+        # Deduplicate after classification so the count reflects distinct
+        # reports. One wire story on four outlets is one road blockage.
+        if _is_duplicate(it, items):
+            duplicates += 1
+            continue
         counts[status] += 1
         items.append(dict(it, status=status, tags=tags))
     score = sum(ROAD_WEIGHTS[s] * n for s, n in counts.items())
     signal = max(0.0, min(1.0, score / ROAD_SATURATE))
     return {"answer": news.get("answer"), "items": items, "counts": counts,
             "signal": round(signal, 3), "considered": len(news["items"]),
-            "off_topic": dropped, "query_days": days}
+            "off_topic": dropped, "duplicates": duplicates, "query_days": days}
 
 # ---- ArcGIS drive-time service areas (isochrones) -----------------------
 # The road-access signal above is derived from news prose, which carries no

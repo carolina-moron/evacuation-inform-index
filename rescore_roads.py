@@ -17,16 +17,38 @@ Usage:
     python3 rescore_roads.py --dry-run   # report changes, write nothing
     python3 rescore_roads.py             # apply
 """
-import json, glob, os, sys
+import json, glob, os, re, sys
 import server
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "snapshot", "detail")
+GEO = os.path.join(ROOT, "geo.js")
+
+
+def load_places():
+    """slug -> curated place label, for the crises that have a sub-national one.
+
+    The sub-national gate cannot run without this. A crisis whose theatre is one
+    province is judged against that province, not against its country, so
+    re-filtering without the place would apply the loose country-level rule and
+    keep exactly the items the gate was tightened to reject.
+    """
+    if not os.path.exists(GEO):
+        sys.exit(f"missing {GEO} — run python3 geo/build_geo.py first")
+    m = re.search(r"window\.EII_GEO\s*=\s*(\{.*\})\s*;",
+                  open(GEO, encoding="utf-8").read(), re.S)
+    if not m:
+        sys.exit("could not parse window.EII_GEO from geo.js")
+    geo = json.loads(m.group(1))
+    return {slug: (g.get("place") if g.get("scope") in ("subnational", "reception")
+                   else None)
+            for slug, g in geo.items()}
 
 
 def main():
     dry = "--dry-run" in sys.argv
     changed, stale = [], []
+    places = load_places()
 
     for path in sorted(glob.glob(os.path.join(OUT, "*.json"))):
         d = json.load(open(path, encoding="utf-8"))
@@ -34,16 +56,22 @@ def main():
         if not roads:
             continue
         country, crisis = d.get("country"), d.get("crisis")
+        place = places.get(os.path.basename(path)[:-5])
 
         kept, counts = [], {"blocked": 0, "damaged": 0, "checkpoint": 0, "reopened": 0}
+        dupes = 0
         for it in roads.get("items") or []:
             blob = f"{it.get('title','')} {it.get('snippet','')}"
-            if not server.road_item_is_relevant(blob, country):
+            if not server.road_item_is_relevant(blob, country, place):
                 continue
             # Re-classify too: the status patterns were corrected alongside the
             # gate ("shuts" did not match \bshut\b, so closures read as reopenings).
             status, tags = server.classify_road(blob)
             if status == "unclear":
+                continue
+            # One wire story syndicated across four outlets is one blockage.
+            if server._is_duplicate(it, kept):
+                dupes += 1
                 continue
             counts[status] += 1
             kept.append(dict(it, status=status, tags=tags))
@@ -60,6 +88,8 @@ def main():
                 roads["counts"] = counts
                 roads["signal"] = signal
                 roads["rescored"] = True
+                if dupes:
+                    roads["duplicates"] = roads.get("duplicates", 0) + dupes
                 json.dump(d, open(path, "w", encoding="utf-8"), ensure_ascii=False)
 
         # Crises whose alias list grew were searched under a stricter gate than
